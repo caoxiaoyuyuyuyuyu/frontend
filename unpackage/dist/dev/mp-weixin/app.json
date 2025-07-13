@@ -6,7 +6,10 @@
     "pages/pestGallery/pestGallery",
     "pages/profile/record",
     "pages/profile/help",
-    "pages/profile/pestShare"
+    "pages/profile/pestShare",
+    "pages/chatAI/history/history",
+    "pages/chatAI/history",
+    "pages/pestDetail/pestDetail"
   ],
   "window": {
     "navigationBarTextStyle": "black",

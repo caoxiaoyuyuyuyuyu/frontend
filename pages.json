@@ -46,6 +46,27 @@
             "style": {
                 "navigationBarTitleText": ""
             }
+        },
+        {
+        	"path" : "pages/chatAI/history/history",
+        	"style" : 
+        	{
+        		"navigationBarTitleText" : ""
+        	}
+        },
+        {
+        	"path" : "pages/chatAI/history",
+        	"style" : 
+        	{
+        		"navigationBarTitleText" : ""
+        	}
+        },
+        {
+        	"path" : "pages/pestDetail/pestDetail",
+        	"style" : 
+        	{
+        		"navigationBarTitleText" : ""
+        	}
         }
 	],
 	"globalStyle": {

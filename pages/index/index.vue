@@ -1,52 +1,305 @@
 <template>
-	<view class="content">
-		<image class="logo" src="/static/logo.png"></image>
-		<view class="text-area">
-			<text class="title">{{title}}</text>
-		</view>
-	</view>
+    <view class="container">
+        <!-- 顶部标题区域 -->
+        <view class="header">
+            <text class="main-title">害虫识别</text>
+            <text class="sub-title">AI智能识别，快速诊断</text>
+        </view>
+        
+        <!-- 中间按钮区域 -->
+        <view class="button-container">
+            <view class="button-group">
+                <!-- 相机拍照按钮 -->
+                <view class="action-button camera-button" @click="takePhoto">
+                    <view class="icon-container">
+                        <view class="camera-icon">
+                            <view class="camera-body"></view>
+                            <view class="camera-lens"></view>
+                            <view class="camera-flash"></view>
+                        </view>
+                    </view>
+                    <text class="button-text">拍照识别</text>
+                    <text class="button-desc">实时拍摄害虫照片</text>
+                </view>
+                
+                <!-- 照片选择按钮 -->
+                <view class="action-button gallery-button" @click="chooseImage">
+                    <view class="icon-container">
+                        <view class="gallery-icon">
+                            <view class="gallery-frame"></view>
+                            <view class="gallery-image"></view>
+                            <view class="gallery-corner"></view>
+                        </view>
+                    </view>
+                    <text class="button-text">相册选择</text>
+                    <text class="button-desc">从相册选择照片</text>
+                </view>
+            </view>
+        </view>
+        
+        <!-- 底部说明区域 -->
+        <view class="footer">
+            <text class="footer-text">支持识别常见农作物害虫</text>
+        </view>
+    </view>
 </template>
 
 <script>
-	export default {
-		data() {
-			return {
-				title: 'Hello'
-			}
-		},
-		onLoad() {
-
-		},
-		methods: {
-
-		}
-	}
+    export default {
+        data() {
+            return {
+                title: '害虫识别'
+            }
+        },
+        onLoad() {
+            // 页面加载时的初始化
+        },
+        methods: {
+            // 拍照功能
+            takePhoto() {
+                uni.chooseImage({
+                    count: 1,
+                    sourceType: ['camera'],
+                    success: (res) => {
+                        console.log('拍照成功:', res.tempFilePaths);
+                        // 这里可以跳转到识别页面
+                        this.uploadAndIdentify(res.tempFilePaths[0]);
+                    },
+                    fail: (err) => {
+                        console.error('拍照失败:', err);
+                        uni.showToast({
+                            title: '拍照失败',
+                            icon: 'none'
+                        });
+                    }
+                });
+            },
+            
+            // 选择照片功能
+            chooseImage() {
+                uni.chooseImage({
+                    count: 1,
+                    sourceType: ['album'],
+                    success: (res) => {
+                        console.log('选择照片成功:', res.tempFilePaths);
+                        // 这里可以跳转到识别页面
+                        this.uploadAndIdentify(res.tempFilePaths[0]);
+                    },
+                    fail: (err) => {
+                        console.error('选择照片失败:', err);
+                        uni.showToast({
+                            title: '选择照片失败',
+                            icon: 'none'
+                        });
+                    }
+                });
+            },
+            
+            // 上传并识别
+            uploadAndIdentify(imagePath) {
+                // 这里可以添加图片上传和识别的逻辑
+                uni.showLoading({
+                    title: '正在识别...'
+                });
+                
+                // 模拟识别过程
+                setTimeout(() => {
+                    uni.hideLoading();
+                    uni.showToast({
+                        title: '识别功能开发中',
+                        icon: 'none'
+                    });
+                }, 2000);
+            }
+        }
+    }
 </script>
 
 <style>
-	.content {
-		display: flex;
-		flex-direction: column;
-		align-items: center;
-		justify-content: center;
-	}
-
-	.logo {
-		height: 200rpx;
-		width: 200rpx;
-		margin-top: 200rpx;
-		margin-left: auto;
-		margin-right: auto;
-		margin-bottom: 50rpx;
-	}
-
-	.text-area {
-		display: flex;
-		justify-content: center;
-	}
-
-	.title {
-		font-size: 36rpx;
-		color: #8f8f94;
-	}
+    .container {
+        min-height: 100vh;
+        background: linear-gradient(135deg, #4caf4fc4 0%, #4CAF50 100%);
+        display: flex;
+        flex-direction: column;
+        padding: 40rpx;
+    }
+    
+    .header {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        margin-bottom: 60rpx;
+    }
+    
+    .main-title {
+        font-size: 48rpx;
+        font-weight: bold;
+        color: #ffffff;
+        margin-bottom: 20rpx;
+    }
+    
+    .sub-title {
+        font-size: 28rpx;
+        color: rgba(255, 255, 255, 0.8);
+    }
+    
+    .button-container {
+        flex: 2;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+    
+    .button-group {
+        display: flex;
+        flex-direction: column;
+        gap: 40rpx;
+        width: 100%;
+    }
+    
+    .action-button {
+        background: rgba(255, 255, 255, 0.95);
+        border-radius: 24rpx;
+        padding: 60rpx 40rpx;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        box-shadow: 0 8rpx 32rpx rgba(0, 0, 0, 0.1);
+        transition: all 0.3s ease;
+    }
+    
+    .action-button:active {
+        transform: scale(0.98);
+        box-shadow: 0 4rpx 16rpx rgba(0, 0, 0, 0.15);
+    }
+    
+    .camera-button {
+        border-left: 8rpx solid #4caf4fc4;
+    }
+    
+    .gallery-button {
+        border-left: 8rpx solid #a6ee96;
+    }
+    
+    .icon-container {
+        width: 120rpx;
+        height: 120rpx;
+        background: linear-gradient(135deg, #a6ee96 0%, #764ba2 100%);
+        border-radius: 60rpx;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin-bottom: 30rpx;
+    }
+    
+    .icon {
+        font-size: 60rpx;
+    }
+    
+    /* 相机图标样式 */
+    .camera-icon {
+        position: relative;
+        width: 60rpx;
+        height: 40rpx;
+    }
+    
+    .camera-body {
+        position: absolute;
+        width: 60rpx;
+        height: 40rpx;
+        background: #ffffff;
+        border-radius: 8rpx;
+        border: 3rpx solid #333333;
+    }
+    
+    .camera-lens {
+        position: absolute;
+        top: 8rpx;
+        left: 50%;
+        transform: translateX(-50%);
+        width: 24rpx;
+        height: 24rpx;
+        background: #333333;
+        border-radius: 50%;
+        border: 2rpx solid #ffffff;
+    }
+    
+    .camera-flash {
+        position: absolute;
+        top: -8rpx;
+        right: 8rpx;
+        width: 12rpx;
+        height: 8rpx;
+        background: #ffffff;
+        border-radius: 4rpx;
+        border: 1rpx solid #333333;
+    }
+    
+    /* 相册图标样式 */
+    .gallery-icon {
+        position: relative;
+        width: 60rpx;
+        height: 50rpx;
+    }
+    
+    .gallery-frame {
+        position: absolute;
+        width: 50rpx;
+        height: 40rpx;
+        background: #ffffff;
+        border: 3rpx solid #333333;
+        border-radius: 4rpx;
+    }
+    
+    .gallery-image {
+        position: absolute;
+        top: 6rpx;
+        left: 6rpx;
+        width: 38rpx;
+        height: 28rpx;
+        background: linear-gradient(45deg, #e0e0e0 25%, transparent 25%), 
+                    linear-gradient(-45deg, #e0e0e0 25%, transparent 25%), 
+                    linear-gradient(45deg, transparent 75%, #e0e0e0 75%), 
+                    linear-gradient(-45deg, transparent 75%, #e0e0e0 75%);
+        background-size: 8rpx 8rpx;
+        background-position: 0 0, 0 4rpx, 4rpx -4rpx, -4rpx 0rpx;
+        border-radius: 2rpx;
+    }
+    
+    .gallery-corner {
+        position: absolute;
+        top: -4rpx;
+        right: -4rpx;
+        width: 16rpx;
+        height: 16rpx;
+        background: #ffffff;
+        border: 2rpx solid #333333;
+        border-radius: 2rpx;
+    }
+    
+    .button-text {
+        font-size: 36rpx;
+        font-weight: bold;
+        color: #333333;
+        margin-bottom: 10rpx;
+    }
+    
+    .button-desc {
+        font-size: 24rpx;
+        color: #666666;
+    }
+    
+    .footer {
+        flex: 1;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+    
+    .footer-text {
+        font-size: 24rpx;
+        color: rgba(255, 255, 255, 0.7);
+    }
 </style>
