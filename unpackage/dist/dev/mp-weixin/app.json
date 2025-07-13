@@ -1,12 +1,43 @@
 {
   "pages": [
-    "pages/index/index"
+    "pages/index/index",
+    "pages/pestGallery/pestGallery",
+    "pages/chatAI/chatAI",
+    "pages/profile/profile"
   ],
   "window": {
     "navigationBarTextStyle": "black",
     "navigationBarTitleText": "uni-app",
     "navigationBarBackgroundColor": "#F8F8F8",
     "backgroundColor": "#F8F8F8"
+  },
+  "tabBar": {
+    "list": [
+      {
+        "pagePath": "pages/index/index",
+        "text": "首页",
+        "iconPath": "/static/logo.png",
+        "selectedIconPath": "/static/logo.png"
+      },
+      {
+        "pagePath": "pages/pestGallery/pestGallery",
+        "text": "识别榜",
+        "iconPath": "/static/logo.png",
+        "selectedIconPath": "/static/logo.png"
+      },
+      {
+        "pagePath": "pages/chatAI/chatAI",
+        "text": "首页",
+        "iconPath": "/static/logo.png",
+        "selectedIconPath": "/static/logo.png"
+      },
+      {
+        "pagePath": "pages/profile/profile",
+        "text": "首页",
+        "iconPath": "/static/logo.png",
+        "selectedIconPath": "/static/logo.png"
+      }
+    ]
   },
   "usingComponents": {}
 }

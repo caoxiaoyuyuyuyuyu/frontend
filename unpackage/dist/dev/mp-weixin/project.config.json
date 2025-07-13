@@ -9,12 +9,11 @@
     "postcss": false,
     "minified": false,
     "newFeature": true,
-    "bigPackageSizeSupport": true,
-    "minifyWXML": true
+    "bigPackageSizeSupport": true
   },
   "compileType": "miniprogram",
   "libVersion": "",
-  "appid": "touristappid",
+  "appid": "wxaefe7c5d5c36c81c",
   "projectname": "frontend",
   "condition": {
     "search": {
