@@ -1,0 +1,24 @@
+
+.help-container.data-v-5194e907 {
+  padding: 32rpx 24rpx 32rpx 24rpx;
+  background: #f8f9fb;
+  min-height: 100vh;
+}
+.help-section.data-v-5194e907 {
+  background: #fff;
+  border-radius: 18rpx;
+  margin-bottom: 28rpx;
+  padding: 28rpx 24rpx;
+  box-shadow: 0 2rpx 8rpx #eee;
+}
+.help-title.data-v-5194e907 {
+  font-size: 30rpx;
+  font-weight: bold;
+  color: #2d2e3a;
+  margin-bottom: 16rpx;
+}
+.help-content.data-v-5194e907 {
+  font-size: 26rpx;
+  color: #444;
+  line-height: 1.8;
+}
