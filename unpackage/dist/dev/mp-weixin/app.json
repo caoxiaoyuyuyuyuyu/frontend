@@ -27,13 +27,13 @@
       },
       {
         "pagePath": "pages/pestGallery/pestGallery",
-        "text": "识别榜",
+        "text": "害虫库",
         "iconPath": "/static/logo.png",
         "selectedIconPath": "/static/logo.png"
       },
       {
         "pagePath": "pages/chatAI/chatAI",
-        "text": "首页",
+        "text": "AI问答",
         "iconPath": "/static/logo.png",
         "selectedIconPath": "/static/logo.png"
       },

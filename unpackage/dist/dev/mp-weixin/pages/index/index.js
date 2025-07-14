@@ -1,9 +1,10 @@
 "use strict";
 const common_vendor = require("../../common/vendor.js");
+const common_assets = require("../../common/assets.js");
 const _sfc_main = {
   data() {
     return {
-      title: "害虫识别"
+      title: "智慧农业"
     };
   },
   onLoad() {
@@ -15,11 +16,11 @@ const _sfc_main = {
         count: 1,
         sourceType: ["camera"],
         success: (res) => {
-          common_vendor.index.__f__("log", "at pages/index/index.vue:64", "拍照成功:", res.tempFilePaths);
+          common_vendor.index.__f__("log", "at pages/index/index.vue:72", "拍照成功:", res.tempFilePaths);
           this.uploadAndIdentify(res.tempFilePaths[0]);
         },
         fail: (err) => {
-          common_vendor.index.__f__("error", "at pages/index/index.vue:69", "拍照失败:", err);
+          common_vendor.index.__f__("error", "at pages/index/index.vue:77", "拍照失败:", err);
           common_vendor.index.showToast({
             title: "拍照失败",
             icon: "none"
@@ -33,11 +34,11 @@ const _sfc_main = {
         count: 1,
         sourceType: ["album"],
         success: (res) => {
-          common_vendor.index.__f__("log", "at pages/index/index.vue:84", "选择照片成功:", res.tempFilePaths);
+          common_vendor.index.__f__("log", "at pages/index/index.vue:92", "选择照片成功:", res.tempFilePaths);
           this.uploadAndIdentify(res.tempFilePaths[0]);
         },
         fail: (err) => {
-          common_vendor.index.__f__("error", "at pages/index/index.vue:89", "选择照片失败:", err);
+          common_vendor.index.__f__("error", "at pages/index/index.vue:97", "选择照片失败:", err);
           common_vendor.index.showToast({
             title: "选择照片失败",
             icon: "none"
@@ -62,8 +63,10 @@ const _sfc_main = {
 };
 function _sfc_render(_ctx, _cache, $props, $setup, $data, $options) {
   return {
-    a: common_vendor.o((...args) => $options.takePhoto && $options.takePhoto(...args)),
-    b: common_vendor.o((...args) => $options.chooseImage && $options.chooseImage(...args))
+    a: common_assets._imports_0,
+    b: common_vendor.o((...args) => $options.takePhoto && $options.takePhoto(...args)),
+    c: common_assets._imports_1,
+    d: common_vendor.o((...args) => $options.chooseImage && $options.chooseImage(...args))
   };
 }
 const MiniProgramPage = /* @__PURE__ */ common_vendor._export_sfc(_sfc_main, [["render", _sfc_render]]);

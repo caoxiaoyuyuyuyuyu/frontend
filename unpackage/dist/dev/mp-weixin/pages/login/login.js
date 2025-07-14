@@ -66,7 +66,7 @@ function _sfc_render(_ctx, _cache, $props, $setup, $data, $options) {
   return common_vendor.e({
     a: !$data.hasLogin
   }, !$data.hasLogin ? {
-    b: common_assets._imports_0,
+    b: common_assets._imports_0$3,
     c: common_vendor.o((...args) => $options.handleGetUserInfo && $options.handleGetUserInfo(...args))
   } : {
     d: common_vendor.t($data.userInfo.nickname)
