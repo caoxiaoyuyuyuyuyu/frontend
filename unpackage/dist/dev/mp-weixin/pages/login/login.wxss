@@ -1,0 +1,25 @@
+
+.login-page {
+  padding: 40rpx;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 100vh;
+}
+.login-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: #07C160;
+  color: white;
+  border-radius: 50rpx;
+  padding: 20rpx 40rpx;
+}
+.login-btn image {
+  width: 40rpx;
+  margin-right: 15rpx;
+}
+.welcome {
+  font-size: 32rpx;
+  color: #333;
+}

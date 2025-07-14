@@ -58,7 +58,7 @@ export default {
         { text: '识别帮助', icon: '/static/logo.png', url: '/pages/profile/help' },
         { text: '联系客服', icon: '/static/logo.png', url: '' },
       ],
-      avatarUrl: '/static/logo.png',
+      avatarUrl: 'https://thirdwx.qlogo.cn/mmopen/vi_32/POgEwh4mIHO4nibH0KlMECNjjGxQUq24ZEaGT4poC6icRiccVGKSyXwibcPq4BWmiaIGuG1icwxaQX6grC9VemZoJ8rg/132',
       nickname: '微信用户',
     }
   },
