@@ -61,6 +61,13 @@
         	{
         		"navigationBarTitleText" : ""
         	}
+        },
+        {
+        	"path" : "pages/login/login",
+        	"style" : 
+        	{
+        		"navigationBarTitleText" : ""
+        	}
         }
 	],
 	"globalStyle": {
