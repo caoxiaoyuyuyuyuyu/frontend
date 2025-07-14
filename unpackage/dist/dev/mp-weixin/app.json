@@ -8,7 +8,8 @@
     "pages/profile/help",
     "pages/profile/pestShare",
     "pages/chatAI/history",
-    "pages/pestDetail/pestDetail"
+    "pages/pestDetail/pestDetail",
+    "pages/login/login"
   ],
   "window": {
     "navigationBarTextStyle": "black",
