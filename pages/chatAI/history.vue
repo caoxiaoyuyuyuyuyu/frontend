@@ -1,26 +1,14 @@
 <template>
 	<view class="history-container">
-		<!-- 顶部标题栏 -->
-		<view class="header">
-			<view class="header-left">
-				<view class="back-btn" @tap="goBack">
-					<text class="back-icon">←</text>
-				</view>
-			</view>
-			<view class="header-center">
-				<text class="title">历史对话</text>
-			</view>
-			<view class="header-right">
-				<view class="clear-btn" @tap="clearAllHistory">
-					<text class="clear-icon">🗑️</text>
-				</view>
-			</view>
-		</view>
+
 		
 		<!-- 搜索栏 -->
 		<view class="search-container">
+			<view class="filter-btn" @tap="showFilterOptions">
+				<image src="/static/filter.png" class="filter-icon"></image>
+			</view>
 			<view class="search-box">
-				<view class="search-icon">🔍</view>
+				<image src="/static/search.png" class="search-icon"></image>
 				<input 
 					class="search-input" 
 					v-model="searchKeyword" 
@@ -49,7 +37,7 @@
 				</view>
 				<view class="history-actions">
 					<view class="delete-btn" @tap.stop="deleteChat(chat.id)">
-						<text class="delete-icon">×</text>
+						<image src="/static/delete.png" class="delete-icon"></image>
 					</view>
 				</view>
 			</view>
@@ -65,11 +53,26 @@
 </template>
 
 <script>
+	import { 
+		loadHistoryChats, 
+		deleteChat, 
+		searchChats, 
+		setSelectedChat,
+		getMessagePreview
+	} from './api.js';
+	
 	export default {
 		data() {
 			return {
 				historyChats: [], // 历史对话列表
 				searchKeyword: '', // 搜索关键词
+				filterType: 'all', // 筛选类型：all, today, week, month
+				filterOptions: [
+					{ label: '全部', value: 'all' },
+					{ label: '今天', value: 'today' },
+					{ label: '本周', value: 'week' },
+					{ label: '本月', value: 'month' }
+				]
 			}
 		},
 		onLoad() {
@@ -82,45 +85,115 @@
 		computed: {
 			// 过滤后的历史对话列表
 			filteredHistoryChats() {
-				if (!this.searchKeyword.trim()) {
-					return this.historyChats;
-				}
-				
-				const keyword = this.searchKeyword.toLowerCase();
-				return this.historyChats.filter(chat => {
-					// 搜索标题
-					if (chat.title && chat.title.toLowerCase().includes(keyword)) {
-						return true;
-					}
-					// 搜索消息内容
-					if (chat.messages) {
-						return chat.messages.some(message => 
-							message.content && message.content.toLowerCase().includes(keyword)
-						);
-					}
-					return false;
-				});
+				// 这里需要改为异步处理，暂时返回本地数据
+				return this.historyChats;
 			}
 		},
 		methods: {
-			// 返回上一页
-			goBack() {
-				uni.navigateBack();
-			},
-			
 			// 加载历史对话列表
-			loadHistoryChats() {
-				// 从本地存储加载历史对话数据
-				const storedChats = uni.getStorageSync('historyChats');
-				if (storedChats && storedChats.length > 0) {
-					// 按最后消息时间排序（最新的在前面）
-					this.historyChats = [...storedChats].sort((a, b) => {
-						const timeA = new Date(a.lastTime);
-						const timeB = new Date(b.lastTime);
-						return timeB - timeA; // 降序排列，最新的在前面
+			async loadHistoryChats() {
+				try {
+					// 使用API从后端加载历史对话数据
+					const response = await loadHistoryChats();
+					if (response.success) {
+						this.historyChats = response.data || [];
+					} else {
+						// 如果后端没有数据，使用示例数据
+						this.historyChats = [
+							{
+								id: 'chat1',
+								title: '关于玉米害虫的咨询',
+								lastTime: '2024-01-15 14:30',
+								messages: [
+									{
+										type: 'user',
+										content: '玉米地里发现了虫子，能帮我识别一下吗？',
+										time: '14:30'
+									},
+									{
+										type: 'ai',
+										content: '根据您的描述，这可能是玉米螟。建议您上传图片进行更准确的识别。',
+										time: '14:31'
+									}
+								]
+							},
+							{
+								id: 'chat2',
+								title: '水稻病虫害防治',
+								lastTime: '2024-01-14 09:15',
+								messages: [
+									{
+										type: 'user',
+										content: '水稻叶子发黄，是什么原因？',
+										time: '09:15'
+									},
+									{
+										type: 'ai',
+										content: '水稻叶子发黄可能是缺肥或病虫害导致的。建议您检查是否有虫害，并适当施肥。',
+										time: '09:16'
+									}
+								]
+							},
+							{
+								id: 'chat3',
+								title: '蔬菜害虫识别',
+								lastTime: '2024-01-13 16:45',
+								messages: [
+									{
+										type: 'user',
+										content: '白菜上有小虫子，怎么处理？',
+										time: '16:45'
+									},
+									{
+										type: 'ai',
+										content: '这可能是菜青虫。建议使用生物农药或人工捕杀，避免使用高毒农药。',
+										time: '16:46'
+									}
+								]
+							},
+							{
+								id: 'chat4',
+								title: '果树病虫害咨询',
+								lastTime: '2024-01-12 11:20',
+								messages: [
+									{
+										type: 'user',
+										content: '苹果树上有蚜虫，用什么药比较好？',
+										time: '11:20'
+									},
+									{
+										type: 'ai',
+										content: '对于苹果树蚜虫，建议使用吡虫啉或啶虫脒等药剂，注意轮换使用避免抗性。',
+										time: '11:21'
+									}
+								]
+							},
+							{
+								id: 'chat5',
+								title: '小麦病虫害防治',
+								lastTime: '2024-01-11 15:30',
+								messages: [
+									{
+										type: 'user',
+										content: '小麦叶子有白粉病，怎么防治？',
+										time: '15:30'
+									},
+									{
+										type: 'ai',
+										content: '小麦白粉病可以使用三唑酮、戊唑醇等药剂防治，同时注意通风透光。',
+										time: '15:31'
+									}
+								]
+							}
+						];
+					}
+				} catch (error) {
+					console.error('加载历史对话失败:', error);
+					uni.showToast({
+						title: '加载失败，请检查网络',
+						icon: 'none'
 					});
-				} else {
-					// 如果没有存储的数据，使用模拟数据作为示例
+					// 使用示例数据作为备用
 					this.historyChats = [
 						{
 							id: 'chat1',
@@ -138,93 +211,20 @@
 									time: '14:31'
 								}
 							]
-						},
-						{
-							id: 'chat2',
-							title: '水稻病虫害防治',
-							lastTime: '2024-01-14 09:15',
-							messages: [
-								{
-									type: 'user',
-									content: '水稻叶子发黄，是什么原因？',
-									time: '09:15'
-								},
-								{
-									type: 'ai',
-									content: '水稻叶子发黄可能是缺肥或病虫害导致的。建议您检查是否有虫害，并适当施肥。',
-									time: '09:16'
-								}
-							]
-						},
-						{
-							id: 'chat3',
-							title: '蔬菜害虫识别',
-							lastTime: '2024-01-13 16:45',
-							messages: [
-								{
-									type: 'user',
-									content: '白菜上有小虫子，怎么处理？',
-									time: '16:45'
-								},
-								{
-									type: 'ai',
-									content: '这可能是菜青虫。建议使用生物农药或人工捕杀，避免使用高毒农药。',
-									time: '16:46'
-								}
-							]
-						},
-						{
-							id: 'chat4',
-							title: '果树病虫害咨询',
-							lastTime: '2024-01-12 11:20',
-							messages: [
-								{
-									type: 'user',
-									content: '苹果树上有蚜虫，用什么药比较好？',
-									time: '11:20'
-								},
-								{
-									type: 'ai',
-									content: '对于苹果树蚜虫，建议使用吡虫啉或啶虫脒等药剂，注意轮换使用避免抗性。',
-									time: '11:21'
-								}
-							]
-						},
-						{
-							id: 'chat5',
-							title: '小麦病虫害防治',
-							lastTime: '2024-01-11 15:30',
-							messages: [
-								{
-									type: 'user',
-									content: '小麦叶子有白粉病，怎么防治？',
-									time: '15:30'
-								},
-								{
-									type: 'ai',
-									content: '小麦白粉病可以使用三唑酮、戊唑醇等药剂防治，同时注意通风透光。',
-									time: '15:31'
-								}
-							]
 						}
 					];
-					// 保存模拟数据到本地存储
-					uni.setStorageSync('historyChats', this.historyChats);
 				}
 			},
 			
 			// 获取预览文本
 			getPreviewText(messages) {
-				if (messages.length === 0) return '';
-				const lastMessage = messages[messages.length - 1];
-				const text = lastMessage.content;
-				return text.length > 30 ? text.substring(0, 30) + '...' : text;
+				return getMessagePreview(messages);
 			},
 			
 			// 加载指定对话
 			loadChat(chat) {
-				// 将对话数据传递到聊天页面，但不更新时间
-				uni.setStorageSync('selectedChat', chat);
+				// 使用API设置选中的对话
+				setSelectedChat(chat);
 				
 				// 先显示加载提示
 				uni.showToast({
@@ -263,38 +263,35 @@
 			},
 			
 			// 删除对话
-			deleteChat(chatId) {
+			async deleteChat(chatId) {
 				uni.showModal({
 					title: '删除对话',
 					content: '确定要删除这个对话吗？删除后无法恢复。',
-					success: (res) => {
+					success: async (res) => {
 						if (res.confirm) {
-							this.historyChats = this.historyChats.filter(chat => chat.id !== chatId);
-							// 更新本地存储
-							uni.setStorageSync('historyChats', this.historyChats);
-							uni.showToast({
-								title: '删除成功',
-								icon: 'success'
-							});
-						}
-					}
-				});
-			},
-			
-			// 清空所有历史
-			clearAllHistory() {
-				uni.showModal({
-					title: '清空历史',
-					content: '确定要清空所有历史对话吗？此操作不可恢复。',
-					success: (res) => {
-						if (res.confirm) {
-							this.historyChats = [];
-							// 清空本地存储
-							uni.removeStorageSync('historyChats');
-							uni.showToast({
-								title: '已清空所有历史',
-								icon: 'success'
-							});
+							try {
+								// 使用API删除对话
+								const response = await deleteChat(chatId);
+								if (response.success) {
+									// 更新本地数据
+									this.historyChats = this.historyChats.filter(chat => chat.id !== chatId);
+									uni.showToast({
+										title: '删除成功',
+										icon: 'success'
+									});
+								} else {
+									uni.showToast({
+										title: response.message || '删除失败',
+										icon: 'none'
+									});
+								}
+							} catch (error) {
+								console.error('删除对话失败:', error);
+								uni.showToast({
+									title: '删除失败，请检查网络',
+									icon: 'none'
+								});
+							}
 						}
 					}
 				});
@@ -306,17 +303,34 @@
 			},
 			
 			// 执行搜索
-			performSearch() {
+			async performSearch() {
 				if (this.searchKeyword.trim()) {
-					const count = this.filteredHistoryChats.length;
-					if (count > 0) {
+					try {
+						const response = await searchChats(this.searchKeyword, this.filterType);
+						if (response.success) {
+							this.historyChats = response.data || [];
+							const count = this.historyChats.length;
+							if (count > 0) {
+								uni.showToast({
+									title: `找到 ${count} 个对话`,
+									icon: 'none'
+								});
+							} else {
+								uni.showToast({
+									title: '未找到相关对话',
+									icon: 'none'
+								});
+							}
+						} else {
+							uni.showToast({
+								title: response.message || '搜索失败',
+								icon: 'none'
+							});
+						}
+					} catch (error) {
+						console.error('搜索失败:', error);
 						uni.showToast({
-							title: `找到 ${count} 个对话`,
-							icon: 'none'
-						});
-					} else {
-						uni.showToast({
-							title: '未找到相关对话',
+							title: '搜索失败，请检查网络',
 							icon: 'none'
 						});
 					}
@@ -331,6 +345,28 @@
 			// 高亮搜索文本（已移除，改用CSS样式实现）
 			highlightSearchText(text) {
 				return text; // 直接返回原文本，使用CSS样式实现高亮
+			},
+			
+			// 显示筛选选项
+			showFilterOptions() {
+				const options = this.filterOptions.map(option => option.label);
+				uni.showActionSheet({
+					itemList: options,
+					success: (res) => {
+						const selectedOption = this.filterOptions[res.tapIndex];
+						this.filterType = selectedOption.value;
+						
+						uni.showToast({
+							title: `已筛选：${selectedOption.label}`,
+							icon: 'success'
+						});
+					}
+				});
+			},
+			
+			// 按时间筛选对话（已移至API中）
+			filterByTime(chats) {
+				// 此方法已移至API中，保留空方法以避免错误
 			},
 			
 			// 检查对话是否高亮
@@ -359,83 +395,76 @@
 		height: 100vh;
 		display: flex;
 		flex-direction: column;
-		background-color: #f5f5f5;
+		background: #f5f5f5;
 		width: 100%;
 		box-sizing: border-box;
+		position: relative;
+	}ss
+	
+	/* 背景装饰 */
+	.history-container::before {
+		content: '';
+		position: absolute;
+		top: 0;
+		left: 0;
+		right: 0;
+		bottom: 0;
+		background: radial-gradient(circle at 20% 80%, rgba(255, 255, 255, 0.1) 0%, transparent 50%),
+					radial-gradient(circle at 80% 20%, rgba(255, 255, 255, 0.1) 0%, transparent 50%);
+		pointer-events: none;
 	}
 	
-	.header {
-		background-color: #4CAF50;
-		padding: 20rpx 30rpx;
+
+	
+	.search-container {
+		background: rgba(255, 255, 255, 0.9);
+		padding: 20rpx 40rpx;
+		border-bottom: 1rpx solid rgba(76, 175, 80, 0.1);
+		position: relative;
+		z-index: 1;
 		display: flex;
 		align-items: center;
-		justify-content: space-between;
-		box-shadow: 0 2rpx 10rpx rgba(0,0,0,0.1);
+		gap: 20rpx;
 	}
 	
-	.header-left, .header-right {
-		width: 80rpx;
-		display: flex;
-		justify-content: center;
-	}
-	
-	.header-center {
-		flex: 1;
-		text-align: center;
-	}
-	
-	.back-btn, .clear-btn {
+	.filter-btn {
 		width: 60rpx;
 		height: 60rpx;
-		background: rgba(255,255,255,0.2);
+		background: transparent;
 		border: none;
-		border-radius: 50%;
 		display: flex;
 		align-items: center;
 		justify-content: center;
+		cursor: pointer;
 		transition: all 0.3s ease;
 	}
 	
-	.back-btn:active, .clear-btn:active {
-		background: rgba(255,255,255,0.3);
+	.filter-btn:active {
+		opacity: 0.7;
 		transform: scale(0.95);
 	}
 	
-	.back-icon {
-		color: white;
-		font-size: 28rpx;
-	}
-	
-	.clear-icon {
-		color: white;
-		font-size: 28rpx;
-	}
-	
-	.title {
-		color: white;
-		font-size: 36rpx;
-		font-weight: bold;
-	}
-	
-	.search-container {
-		background-color: white;
-		padding: 20rpx 30rpx;
-		border-bottom: 1rpx solid #e0e0e0;
+	.filter-icon {
+		width: 40rpx;
+		height: 40rpx;
+		filter: brightness(0) saturate(0) invert(0.6);
 	}
 	
 	.search-box {
 		display: flex;
 		align-items: center;
-		background-color: #f5f5f5;
+		background: rgba(255, 255, 255, 0.8);
 		border-radius: 25rpx;
-		padding: 15rpx 20rpx;
+		padding: 20rpx 25rpx;
+		border: 1rpx solid rgba(248, 248, 248, 0.2);
 		position: relative;
+		flex: 1;
 	}
 	
 	.search-icon {
-		font-size: 28rpx;
-		margin-right: 15rpx;
-		color: #999;
+		width: 35rpx;
+		height: 35rpx;
+		margin-right: 20rpx;
 	}
 	
 	.search-input {
@@ -444,13 +473,18 @@
 		background: transparent;
 		border: none;
 		outline: none;
+		color: #000000;
+	}
+	
+	.search-input::placeholder {
+		color: #000000;
 	}
 	
 	.clear-btn {
 		width: 40rpx;
 		height: 40rpx;
-		background-color: #ccc;
-		border-radius: 50%;
+		background-color: transparent;
+		border: none;
 		display: flex;
 		align-items: center;
 		justify-content: center;
@@ -529,18 +563,17 @@
 	.delete-btn {
 		width: 50rpx;
 		height: 50rpx;
-		background-color: #ff4444;
+		background-color: transparent;
 		border: none;
-		border-radius: 50%;
 		display: flex;
 		align-items: center;
 		justify-content: center;
 	}
 	
 	.delete-icon {
-		color: white;
-		font-size: 28rpx;
-		font-weight: bold;
+		width: 50rpx;
+		height: 50rpx;
+		filter: brightness(0) saturate(0) invert(0.3);
 	}
 	
 	.empty-history {
