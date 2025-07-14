@@ -128,7 +128,7 @@ export default {
   background: #f0f0f0;
 }
 .avatar-edit {
-  font-size: 20rpx;
+  font-size: 24rpx;
   color: #888;
   margin-top: 8rpx;
 }
@@ -142,7 +142,7 @@ export default {
   align-items: center;
 }
 .nickname-input {
-  font-size: 36rpx;
+  font-size: 40rpx;
   font-weight: bold;
   margin-right: 16rpx;
   border: none;
@@ -153,7 +153,7 @@ export default {
 .level-tag {
   background: #e5d3b6;
   color: #7d5c1e;
-  font-size: 22rpx;
+  font-size: 26rpx;
   border-radius: 20rpx;
   padding: 2rpx 16rpx;
   margin-right: 8rpx;
@@ -165,7 +165,7 @@ export default {
   margin-left: 4rpx;
 }
 .uid {
-  font-size: 22rpx;
+  font-size: 26rpx;
   color: #b0b0b0;
   margin: 8rpx 0 0 0;
 }
@@ -175,11 +175,11 @@ export default {
   margin-top: 8rpx;
 }
 .contribution-label {
-  font-size: 22rpx;
+  font-size: 26rpx;
   color: #b0b0b0;
 }
 .contribution-value {
-  font-size: 24rpx;
+  font-size: 28rpx;
   color: #e5d3b6;
   margin-left: 4rpx;
 }
@@ -196,7 +196,7 @@ export default {
   position: relative;
 }
 .progress-row {
-  font-size: 26rpx;
+  font-size: 30rpx;
   margin-bottom: 12rpx;
 }
 .progress-bar-bg {
@@ -217,7 +217,7 @@ export default {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  font-size: 22rpx;
+  font-size: 26rpx;
   margin-top: 4rpx;
 }
 .progress-tip {
@@ -230,7 +230,7 @@ export default {
   color: #7d5c1e;
   border-radius: 20rpx;
   padding: 2rpx 16rpx;
-  font-size: 22rpx;
+  font-size: 26rpx;
 }
 .profile-section {
   background: #fff;
@@ -240,7 +240,7 @@ export default {
   box-shadow: 0 2rpx 8rpx #eee;
 }
 .section-title {
-  font-size: 28rpx;
+  font-size: 32rpx;
   font-weight: bold;
   margin-left: 32rpx;
   margin-bottom: 18rpx;
@@ -264,6 +264,6 @@ export default {
   margin-right: 18rpx;
 }
 .feature-text {
-  font-size: 26rpx;
+  font-size: 30rpx;
 }
 </style>

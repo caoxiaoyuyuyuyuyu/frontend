@@ -1,180 +1,241 @@
 <template>
 	<view class="pest-gallery">
-		<!-- 顶部图片区域 -->
-		<view class="image-area">
-			<!-- 这里放置您准备的图片 -->
-		</view>
-		
-		<!-- 分类导航栏 -->
-		<view class="category-nav">
-			<view class="category-item" :class="{ active: activeCategory === '热度榜' }" @click="selectCategory('热度榜')">
-				<text class="category-name">害虫热度榜</text>
-			</view>
-			<view class="category-item dropdown" :class="{ active: activeCategory === '危害方式' }" @click="toggleDropdown">
-				<text class="category-name">{{ selectedSubCategory || '危害方式' }}</text>
-				<text class="dropdown-arrow">▼</text>
-				<!-- 下拉菜单 -->
-				<view class="dropdown-menu" v-if="showDropdown">
-					<view class="dropdown-item" v-for="(item, index) in dropdownItems" :key="index" @click.stop="selectDropdownItem(item)">
-						<text class="dropdown-text">{{ item }}</text>
+		<!-- 顶部知识科普区域 -->
+		<view class="knowledge-tip">
+			<swiper class="tip-swiper" 
+					:current="currentTipIndex" 
+					@change="onSwiperChange"
+					:autoplay="false"
+					:circular="true"
+					:indicator-dots="false"
+					indicator-color="rgba(204, 204, 204, 0.6)"
+					indicator-active-color="#74c865">
+				<swiper-item v-for="(tip, index) in knowledgeTips" :key="index">
+					<view class="tip-card">
+						<view class="tip-header">
+							<view class="tip-icon">{{ tip.icon }}</view>
+							<view class="tip-title">{{ tip.title }}</view>
+						</view>
+						<view class="tip-content">
+							<text class="tip-text">{{ tip.content }}</text>
+						</view>
+						<view class="tip-footer">
+							<text class="tip-note">{{ tip.note }}</text>
+						</view>
 					</view>
+				</swiper-item>
+			</swiper>
+			<!-- 指示器 -->
+			<view class="tip-indicators">
+				<view class="indicator" v-for="(tip, index) in knowledgeTips" :key="index" 
+					  :class="{ active: currentTipIndex === index }" 
+					  @click="switchTip(index)">
 				</view>
 			</view>
 		</view>
 		
 		<!-- 内容区域 -->
 		<view class="content-area">
-			<!-- 热度榜内容 -->
-			<view v-if="activeCategory === '热度榜'" class="hot-list">
-				<view class="section-title">害虫热度榜</view>
-				<view class="pest-list">
-					<view class="pest-item" v-for="(pest, index) in hotPests" :key="index" @click="showHotPestDetail(pest)">
-						<view class="pest-rank">{{ index + 1 }}</view>
-						<view class="pest-info">
-							<view class="pest-name">{{ pest.name }}</view>
-							<view class="pest-desc">{{ pest.description }}</view>
-						</view>
-						<view class="pest-score">{{ pest.searchCount }}次</view>
+			<!-- 害虫库标题 -->
+			<view class="section-title">害虫图库</view>
+			
+			<!-- 加载状态 -->
+			<view v-if="loading" class="loading-container">
+				<view class="loading-spinner"></view>
+				<text class="loading-text">正在加载害虫数据...</text>
+			</view>
+			
+			<!-- 害虫网格展示 -->
+			<view v-else class="pest-grid">
+				<view class="pest-card" v-for="(pest, index) in pestList" :key="pest.id" @click="showPestDetail(pest)">
+					<view class="pest-image">
+						<image :src="getImageUrl(pest.image)" class="pest-image-file" mode="aspectFill"></image>
+					</view>
+					<view class="pest-card-info">
+						<view class="pest-card-name">{{ pest.name }}</view>
+						<view class="pest-card-desc">{{ pest.host_range }}</view>
 					</view>
 				</view>
 			</view>
 			
-			<!-- 危害方式内容 -->
-			<view v-if="activeCategory === '危害方式' && selectedSubCategory" class="harm-category">
-				<view class="section-title">{{ selectedSubCategory }}害虫</view>
-				<view class="pest-grid">
-					<view class="pest-card" v-for="(pest, index) in currentPests" :key="index" @click="showPestDetail(pest)">
-						<view class="pest-image">
-							<text class="pest-icon">🐛</text>
-						</view>
-						<view class="pest-card-info">
-							<view class="pest-card-name">{{ pest.name }}</view>
-							<view class="pest-card-desc">{{ pest.harmType }}</view>
-						</view>
+			<!-- 分页组件 -->
+			<view v-if="!loading && pestList.length > 0" class="pagination">
+				<view class="pagination-controls">
+					<button 
+						class="pagination-btn prev-btn" 
+						:class="{ disabled: currentPage <= 1 }"
+						:disabled="currentPage <= 1"
+						@click="goToPage(currentPage - 1)"
+					>
+						‹ 上一页
+					</button>
+					
+					<view class="pagination-info">
+						<text class="pagination-text">第 {{ currentPage }} 页，共 {{ totalPages }} 页</text>
 					</view>
+					
+					<button 
+						class="pagination-btn next-btn" 
+						:class="{ disabled: currentPage >= totalPages }"
+						:disabled="currentPage >= totalPages"
+						@click="goToPage(currentPage + 1)"
+					>
+						下一页 ›
+					</button>
 				</view>
-			</view>
-			
-			<!-- 默认提示 -->
-			<view v-else-if="activeCategory === '危害方式' && !selectedSubCategory" class="default-content">
-				<text class="placeholder-text">请选择上方分类查看相关内容</text>
 			</view>
 		</view>
 	</view>
 </template>
 
 <script>
+	import { getPestList, getImageUrl } from './api.js';
+	
 	export default {
+		// 启用下拉刷新
+		onPullDownRefresh() {
+			this.loadPestList().then(() => {
+				uni.stopPullDownRefresh();
+			});
+		},
 		data() {
 			return {
-				activeCategory: '热度榜',
-				showDropdown: false,
-				dropdownItems: ['果树', '林业', '农作物', '园林花卉', '多食性/广食性'],
-				selectedSubCategory: '',
-				// 热度榜数据
-				hotPests: [
-					{ name: '美国白蛾', description: '林业+园林，100+寄主', searchCount: 15842, harmType: '食叶', category: '林业' },
-					{ name: '二星蝽', description: '吸食果汁，导致果实畸形', searchCount: 12456, harmType: '吸食果汁', category: '果树' },
-					{ name: '云斑天牛', description: '蛀干，危害杨树、柳树、核桃等', searchCount: 9876, harmType: '蛀干', category: '林业' },
-					{ name: '菜粉蝶（幼虫）', description: '菜青虫，主要危害甘蓝、白菜等', searchCount: 8765, harmType: '食叶', category: '农作物' },
-					{ name: '桃蛀螟', description: '蛀食桃、李、梨等果实', searchCount: 7654, harmType: '蛀食果实', category: '果树' },
-					{ name: '稻棘缘蝽', description: '吸食水稻穗部，造成秕谷', searchCount: 6543, harmType: '吸食穗部', category: '农作物' },
-					{ name: '麻皮蝽', description: '多食性，危害大豆、玉米、蔬菜等', searchCount: 5432, harmType: '多食性', category: '多食性/广食性' },
-					{ name: '茶翅蝽', description: '吸食梨、苹果等果实，造成"鬼头果"', searchCount: 4321, harmType: '吸食果实', category: '果树' },
-					{ name: '绿刺蛾（幼虫）', description: '食叶，危害苹果、梨、枣等', searchCount: 3210, harmType: '食叶', category: '果树' },
-					{ name: '八点广翅蜡蝉', description: '吸食月季、紫薇等嫩枝', searchCount: 2109, harmType: '吸食嫩枝', category: '园林花卉' }
+				tipTimer: null,
+				// 害虫库数据
+				pestList: [],
+				knowledgeTips: [
+					{ icon: '💡', title: '害虫知识科普', content: '了解害虫分类和危害方式，科学防治病虫害，保护农作物和生态环境。', note: '点击下方害虫查看详细信息' },
+					{ icon: '🌱', title: '农作物保护', content: '了解害虫对农作物的危害，学习如何科学防治病虫害。', note: '点击下方害虫查看详细信息' },
+					{ icon: '🌳', title: '林业保护', content: '了解害虫对林业的影响，学习如何科学防治病虫害。', note: '点击下方害虫查看详细信息' },
+					{ icon: '🌼', title: '园林花卉保护', content: '了解害虫对园林花卉的危害，学习如何科学防治病虫害。', note: '点击下方害虫查看详细信息' },
+					{ icon: '🐛', title: '多食性/广食性害虫', content: '了解多食性/广食性害虫的危害方式，学习如何科学防治病虫害。', note: '点击下方害虫查看详细信息' }
 				],
-				// 各分类害虫数据
-				pestData: {
-					'果树': [
-						{ name: '二星蝽', harmType: '吸食果汁', description: '导致果实畸形，危害苹果、梨、桃、柑橘、葡萄、枣等果树' },
-						{ name: '小绿叶蝉', harmType: '危害叶片，传播病毒', description: '危害桃、葡萄等叶片，传播病毒' },
-						{ name: '桃蛀螟', harmType: '蛀食果实', description: '蛀食桃、李、梨等果实' },
-						{ name: '桑天牛', harmType: '蛀干', description: '蛀干，危害苹果、梨、桑树等' },
-						{ name: '红颈天牛', harmType: '蛀干', description: '蛀干，主要危害桃、杏、樱桃等核果类' },
-						{ name: '茶翅蝽', harmType: '吸食果实', description: '吸食梨、苹果等果实，造成"鬼头果"' },
-						{ name: '绿刺蛾（幼虫）', harmType: '食叶', description: '食叶，危害苹果、梨、枣等' },
-						{ name: '扁刺蛾（幼虫）', harmType: '食叶', description: '食叶，危害柑橘、苹果等' },
-						{ name: '玉带凤蝶（幼虫）', harmType: '食叶', description: '主要危害柑橘叶片' },
-						{ name: '斑须蝽若虫', harmType: '吸食嫩梢', description: '吸食苹果、梨等嫩梢' }
-					],
-					'林业': [
-						{ name: '云斑天牛', harmType: '蛀干', description: '蛀干，危害杨树、柳树、核桃等' },
-						{ name: '光肩星天牛', harmType: '蛀干', description: '蛀干，主要危害杨树、柳树' },
-						{ name: '墨天牛', harmType: '蛀干', description: '蛀干，危害松树、柏树等针叶林' },
-						{ name: '桑天牛', harmType: '蛀干', description: '蛀干，也危害桑树、苹果等' },
-						{ name: '美国白蛾', harmType: '食叶', description: '食叶，危害杨树、柳树、法桐等100+树种' },
-						{ name: '二尾舟蛾（幼虫）', harmType: '食叶', description: '食叶，危害杨树、柳树' },
-						{ name: '扇舟蛾', harmType: '食叶', description: '食叶，危害杨树、栎树等' },
-						{ name: '黑蚱蝉', harmType: '地下危害根系', description: '若虫地下危害根系，成虫产卵损伤枝条' }
-					],
-					'农作物': [
-						{ name: '稻棘缘蝽', harmType: '吸食穗部', description: '吸食水稻穗部，造成秕谷' },
-						{ name: '菜蝽', harmType: '危害蔬菜', description: '危害十字花科蔬菜如白菜、油菜' },
-						{ name: '三齿剑纹夜蛾幼虫', harmType: '食叶', description: '食叶，危害大豆、花生等' },
-						{ name: '菜粉蝶（幼虫）', harmType: '食叶', description: '菜青虫，主要危害甘蓝、白菜等' },
-						{ name: '蝼蛄', harmType: '地下害虫', description: '地下害虫，危害小麦、玉米幼苗根系' },
-						{ name: '赤条蝽', harmType: '危害豆类', description: '危害豆类、瓜类作物' },
-						{ name: '麻皮蝽', harmType: '多食性', description: '多食性，危害大豆、玉米、蔬菜等' }
-					],
-					'园林花卉': [
-						{ name: '八点广翅蜡蝉', harmType: '吸食嫩枝', description: '吸食月季、紫薇等嫩枝' },
-						{ name: '斑衣蜡蝉', harmType: '危害观赏植物', description: '危害臭椿、海棠、樱花等' },
-						{ name: '碧蛾蜡蝉', harmType: '吸食叶片', description: '吸食桂花、茶花等叶片' },
-						{ name: '白星花金龟', harmType: '啃食花瓣', description: '啃食月季、菊花等花瓣' },
-						{ name: '红缘灯蛾（幼虫）', harmType: '食叶', description: '幼虫食叶，危害菊花、一串红等' },
-						{ name: '柳蓝叶甲', harmType: '危害叶片', description: '成虫和幼虫危害柳树、杨树叶片' },
-						{ name: '旋目夜蛾（幼虫）', harmType: '食叶', description: '幼虫食叶，危害悬铃木、紫薇等' }
-					],
-					'多食性/广食性': [
-						{ name: '美国白蛾', harmType: '食叶', description: '林业+园林，100+寄主' },
-						{ name: '麻皮蝽', harmType: '多食性', description: '农作物+果树' },
-						{ name: '绿刺蛾（幼虫）', harmType: '食叶', description: '果树+林业' },
-						{ name: '扁刺蛾（幼虫）', harmType: '食叶', description: '果树+园林' },
-						{ name: '红缘灯蛾', harmType: '食叶', description: '园林+农作物' }
-					]
-				}
+				currentTipIndex: 0,
+				loading: false,
+				currentPage: 1,
+				hasNextPage: false,
+				perPage: 10,
+				totalPages: 1,
+				totalItems: 0,
+				visiblePages: []
 			}
 		},
-		computed: {
-			currentPests() {
-				return this.pestData[this.selectedSubCategory] || [];
-			}
+		mounted() {
+			this.startTipTimer();
+			this.loadPestList();
+		},
+		beforeDestroy() {
+			this.stopTipTimer();
 		},
 		methods: {
-			selectCategory(category) {
-				this.activeCategory = category;
-				this.showDropdown = false;
-				this.selectedSubCategory = '';
+			// 获取图片URL
+			getImageUrl(imageName) {
+				return getImageUrl(imageName);
 			},
-			toggleDropdown() {
-				// 如果已经选择了子分类，点击时重置
-				if (this.selectedSubCategory && !this.showDropdown) {
-					this.selectedSubCategory = '';
-					this.showDropdown = true;
-				} else {
-					this.showDropdown = !this.showDropdown;
+			
+			// 加载害虫列表
+			async loadPestList() {
+				try {
+					this.loading = true;
+					const response = await getPestList({
+						page: this.currentPage,
+						per_page: this.perPage
+					});
+					
+					// 直接使用后端返回的数据结构
+					this.pestList = response.data || [];
+					
+					// 更新分页信息
+					const pagination = response.pagination;
+					this.hasNextPage = pagination.has_next;
+					this.currentPage = pagination.current_page;
+					this.totalPages = pagination.pages || 1;
+					this.totalItems = pagination.total || 0;
+					this.visiblePages = this.generateVisiblePages();
+				} catch (error) {
+					console.error('加载害虫列表失败:', error);
+					// 使用默认数据
+					this.pestList = [
+						{ id: 4, name: '二星蝽', host_range: '麦类、水稻、棉花、大豆、胡麻、高粱、玉米、甘薯、茄子、桑、无花果等', image: 'exc_Adult.png' },
+						{ id: 5, name: '云斑天牛', host_range: '核桃、苹果、梨等果树及杨、柳、桑、栎、白蜡、乌桕、女贞、泡桐、枇杷、苦楝、悬铃木、柑橘、紫薇等树木', image: 'ybtn_Adult.png' },
+						{ id: 6, name: '光肩星天牛', host_range: '杨属、柳属、榆属、法桐、复叶槭、苹果、梨、李、樱桃、樱花、枫香、糖槭、苦楝、桑树等', image: 'gjxtn_Adult.png' },
+						{ id: 7, name: '八点广翅蜡蝉', host_range: '苹果、梨、桃、杏、李、梅、樱桃、枣、栗、山楂、柑橘等果树', image: 'bdgclc_Adult.png' },
+						{ id: 8, name: '棉古毒蛾', host_range: '芒果、荔枝、洋紫荆等40余种植物', image: 'sxdde_Adult.png' },
+						{ id: 9, name: '松墨天牛', host_range: '马尾松、雪松、云杉、柳杉、五针松、赤松等松科植物', image: 'mtn_Adult.png' },
+						{ id: 10, name: '小绿叶蝉', host_range: '葡萄、苹果等果树；棉花、小麦等农作物；十字花科蔬菜等共20+种寄主', image: 'xlyc_Adult.png' },
+						{ id: 11, name: '扁刺蛾', host_range: '枣、苹果、梨、桃、梧桐、枫杨、白杨、泡桐、柿子等50+种果树/林木', image: 'bce_larva.png' },
+						{ id: 12, name: '扇舟蛾属', host_range: '杨属、柳属树种为主', image: 'sze_Adult.png' },
+						{ id: 13, name: '斑衣蜡蝉', host_range: '臭椿（最喜）、杨树、刺槐、葡萄、猕猴桃等30+种林木/果树', image: 'bylc_Adult.png' }
+					];
+					this.hasNextPage = false;
+					this.totalPages = 1;
+					this.totalItems = 13;
+					this.visiblePages = this.generateVisiblePages();
+				} finally {
+					this.loading = false;
 				}
-				this.activeCategory = '危害方式';
 			},
-			selectDropdownItem(item) {
-				console.log('点击了下拉项:', item);
-				this.activeCategory = '危害方式';
-				this.selectedSubCategory = item;
-				this.showDropdown = false;
-				console.log('设置完成 - activeCategory:', this.activeCategory, 'selectedSubCategory:', this.selectedSubCategory);
-			},
+			
 			showPestDetail(pest) {
 				// 跳转到害虫详情页面
 				uni.navigateTo({
-					url: `/pages/pestDetail/pestDetail?pest=${encodeURIComponent(JSON.stringify(pest))}&category=${this.selectedSubCategory}`
+					url: `/pages/pestDetail/pestDetail?pest=${encodeURIComponent(JSON.stringify(pest))}`
 				});
 			},
-			showHotPestDetail(pest) {
-				// 跳转到热度榜害虫详情页面
-				uni.navigateTo({
-					url: `/pages/pestDetail/pestDetail?pest=${encodeURIComponent(JSON.stringify(pest))}&category=${pest.category}`
-				});
+			switchTip(index) {
+				this.currentTipIndex = index;
+				// 重置定时器
+				this.stopTipTimer();
+				this.startTipTimer();
+			},
+			onSwiperChange(e) {
+				this.currentTipIndex = e.detail.current;
+				// 重置定时器
+				this.stopTipTimer();
+				this.startTipTimer();
+			},
+			startTipTimer() {
+				this.tipTimer = setInterval(() => {
+					this.currentTipIndex = (this.currentTipIndex + 1) % this.knowledgeTips.length;
+				}, 30000); // 30秒切换一次
+			},
+			stopTipTimer() {
+				if (this.tipTimer) {
+					clearInterval(this.tipTimer);
+					this.tipTimer = null;
+				}
+			},
+			generateVisiblePages() {
+				const pages = [];
+				const maxVisible = 5; // 最多显示5个页码
+				
+				if (this.totalPages <= maxVisible) {
+					// 如果总页数少于等于最大显示数，显示所有页码
+					for (let i = 1; i <= this.totalPages; i++) {
+						pages.push(i);
+					}
+				} else {
+					// 如果总页数大于最大显示数，显示当前页附近的页码
+					let start = Math.max(1, this.currentPage - Math.floor(maxVisible / 2));
+					let end = Math.min(this.totalPages, start + maxVisible - 1);
+					
+					// 调整起始页，确保显示maxVisible个页码
+					if (end - start + 1 < maxVisible) {
+						start = Math.max(1, end - maxVisible + 1);
+					}
+					
+					for (let i = start; i <= end; i++) {
+						pages.push(i);
+					}
+				}
+				
+				return pages;
+			},
+			goToPage(page) {
+				if (page >= 1 && page <= this.totalPages && page !== this.currentPage) {
+					this.currentPage = page;
+					this.loadPestList();
+				}
 			}
 		}
 	}
@@ -188,119 +249,144 @@
 	background: #f5f5f5;
 }
 
-.image-area {
-	height: 200rpx;
-	background: linear-gradient(135deg, #aaeb9f 0%, #74c865 100%);
-	display: flex;
-	align-items: center;
-	justify-content: center;
+/* 知识科普小tip样式 */
+.knowledge-tip {
+	background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+	padding: 30rpx 25rpx;
 	border-bottom: 1px solid #e0e0e0;
 	position: relative;
 	overflow: hidden;
+	min-height: 240rpx;
 }
 
-.image-area::before {
+.tip-swiper {
+	height: 180rpx;
+	width: 100%;
+}
+
+.knowledge-tip::before {
 	content: '';
 	position: absolute;
 	top: 0;
 	left: 0;
 	right: 0;
 	bottom: 0;
-	background: rgba(255, 255, 255, 0.1);
+	background: linear-gradient(45deg, rgba(116, 200, 101, 0.05) 0%, rgba(170, 235, 159, 0.05) 100%);
 }
 
-.category-nav {
-	display: flex;
-	background: #ffffff;
-	border-bottom: 2px solid #e0e0e0;
-	box-shadow: 0 2rpx 10rpx rgba(0, 0, 0, 0.1);
-}
-
-.category-item {
-	flex: 1;
-	padding: 25rpx 20rpx;
-	text-align: center;
-	cursor: pointer;
-	transition: all 0.3s ease;
+.tip-card {
+	background: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%);
+	border-radius: 16rpx;
+	padding: 30rpx;
+	box-shadow: 0 4rpx 20rpx rgba(0, 0, 0, 0.08);
+	transition: all 0.4s ease;
+	border: 2rpx solid rgba(116, 200, 101, 0.1);
 	position: relative;
-	border-right: 1px solid #f0f0f0;
+	overflow: hidden;
+	height: 140rpx;
 	display: flex;
-	align-items: center;
-	justify-content: center;
+	flex-direction: column;
+	justify-content: space-between;
 }
 
-.category-item:last-child {
-	border-right: none;
-}
-
-.category-item:hover {
-	background: #f8f9fa;
-}
-
-.category-item.active {
-	background: linear-gradient(135deg, #aaeb9f 0%, #74c865 100%);
-	color: #ffffff;
-	transform: translateY(-2rpx);
-	box-shadow: 0 4rpx 15rpx rgba(102, 126, 234, 0.3);
-}
-
-.category-name {
-	font-size: 30rpx;
-	color: #333;
-	font-weight: 600;
-	transition: color 0.3s ease;
-}
-
-.category-item.active .category-name {
-	color: #ffffff;
-}
-
-.dropdown {
-	position: relative;
-}
-
-.dropdown-arrow {
-	font-size: 20rpx;
-	margin-left: 8rpx;
-	color: #666;
-	transition: transform 0.3s ease;
-}
-
-.category-item.active .dropdown-arrow {
-	color: #ffffff;
-}
-
-.dropdown-menu {
+.tip-card::before {
+	content: '';
 	position: absolute;
-	top: 100%;
+	top: 0;
 	left: 0;
 	right: 0;
-	background: #ffffff;
-	border: 1px solid #e0e0e0;
-	border-radius: 8rpx;
-	box-shadow: 0 4rpx 20rpx rgba(0, 0, 0, 0.15);
-	z-index: 1000;
-	margin-top: 2rpx;
+	height: 4rpx;
+	background: linear-gradient(90deg, #74c865 0%, #aaeb9f 100%);
 }
 
-.dropdown-item {
-	padding: 20rpx 25rpx;
-	border-bottom: 1px solid #f0f0f0;
+.tip-card:hover {
+	transform: translateY(-3rpx);
+	box-shadow: 0 8rpx 30rpx rgba(116, 200, 101, 0.15);
+	border-color: rgba(116, 200, 101, 0.3);
+}
+
+.tip-header {
+	display: flex;
+	align-items: center;
+	margin-bottom: 10rpx;
+	position: relative;
+	z-index: 1;
+}
+
+.tip-icon {
+	font-size: 40rpx;
+	margin-right: 15rpx;
+	animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+	0%, 100% { transform: scale(1); }
+	50% { transform: scale(1.1); }
+}
+
+.tip-title {
+	font-size: 32rpx;
+	font-weight: bold;
+	color: #2c3e50;
+}
+
+.tip-content {
+	margin-bottom: 10rpx;
+	position: relative;
+	z-index: 1;
+	flex: 1;
+}
+
+.tip-text {
+	font-size: 26rpx;
+	color: #5a6c7d;
+	line-height: 1.4;
+	display: -webkit-box;
+	-webkit-line-clamp: 2;
+	-webkit-box-orient: vertical;
+	overflow: hidden;
+	text-overflow: ellipsis;
+}
+
+.tip-footer {
+	position: relative;
+	z-index: 1;
+}
+
+.tip-note {
+	font-size: 24rpx;
+	color: #74c865;
+	font-style: italic;
+}
+
+.tip-indicators {
+	display: flex;
+	justify-content: center;
+	margin-top: 20rpx;
+	position: relative;
+	z-index: 1;
+}
+
+.indicator {
+	width: 16rpx;
+	height: 16rpx;
+	background: rgba(204, 204, 204, 0.6);
+	border-radius: 50%;
+	margin: 0 6rpx;
 	cursor: pointer;
-	transition: background 0.3s ease;
+	transition: all 0.3s ease;
+	border: 2rpx solid transparent;
 }
 
-.dropdown-item:last-child {
-	border-bottom: none;
+.indicator:hover {
+	background: rgba(116, 200, 101, 0.3);
+	transform: scale(1.2);
 }
 
-.dropdown-item:hover {
-	background: #f8f9fa;
-}
-
-.dropdown-text {
-	font-size: 28rpx;
-	color: #333;
+.indicator.active {
+	background: #74c865;
+	border-color: rgba(116, 200, 101, 0.3);
+	box-shadow: 0 0 10rpx rgba(116, 200, 101, 0.4);
 }
 
 .content-area {
@@ -313,101 +399,12 @@
 	overflow-y: auto;
 }
 
-.default-content {
-	display: flex;
-	align-items: center;
-	justify-content: center;
-	height: 100%;
-}
-
-.placeholder-text {
-	color: #999;
-	font-size: 28rpx;
-}
-
-/* 热度榜样式 */
 .section-title {
 	font-size: 36rpx;
 	font-weight: bold;
 	color: #333;
 	margin-bottom: 30rpx;
 	text-align: center;
-}
-
-.hot-list {
-	padding: 20rpx 0;
-}
-
-.pest-list {
-	display: flex;
-	flex-direction: column;
-	gap: 20rpx;
-}
-
-.pest-item {
-	display: flex;
-	align-items: center;
-	padding: 25rpx;
-	background: #f8f9fa;
-	border-radius: 12rpx;
-	border-left: 6rpx solid #74c865;
-	transition: all 0.3s ease;
-	cursor: pointer;
-}
-
-.pest-item:hover {
-	transform: translateX(10rpx);
-	box-shadow: 0 4rpx 15rpx rgba(116, 200, 101, 0.2);
-	background: #f0f8f0;
-}
-
-.pest-item:active {
-	transform: translateX(5rpx) scale(0.98);
-}
-
-.pest-rank {
-	width: 60rpx;
-	height: 60rpx;
-	background: linear-gradient(135deg, #ff6b6b 0%, #ee5a52 100%);
-	color: white;
-	border-radius: 50%;
-	display: flex;
-	align-items: center;
-	justify-content: center;
-	font-weight: bold;
-	font-size: 28rpx;
-	margin-right: 25rpx;
-}
-
-.pest-info {
-	flex: 1;
-}
-
-.pest-name {
-	font-size: 32rpx;
-	font-weight: bold;
-	color: #333;
-	margin-bottom: 8rpx;
-}
-
-.pest-desc {
-	font-size: 26rpx;
-	color: #666;
-}
-
-.pest-score {
-	font-size: 28rpx;
-	font-weight: bold;
-	color: #ff6b6b;
-	background: rgba(255, 107, 107, 0.1);
-	padding: 8rpx 16rpx;
-	border-radius: 20rpx;
-	border: 1px solid rgba(255, 107, 107, 0.3);
-}
-
-/* 危害方式分类样式 */
-.harm-category {
-	padding: 20rpx 0;
 }
 
 .pest-grid {
@@ -429,12 +426,23 @@
 .pest-card:hover {
 	transform: translateY(-5rpx);
 	box-shadow: 0 8rpx 25rpx rgba(116, 200, 101, 0.2);
-	border-color: #74c865;
+	border-color: rgba(76, 175, 80, 0.2);
 }
 
 .pest-image {
 	text-align: center;
 	margin-bottom: 20rpx;
+	height: 120rpx;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+}
+
+.pest-image-file {
+	width: 130rpx;
+	height: 130rpx;
+	border-radius: 8rpx;
+	object-fit: cover;
 }
 
 .pest-icon {
@@ -453,7 +461,94 @@
 }
 
 .pest-card-desc {
-	font-size: 24rpx;
+	font-size: 22rpx;
+	color: #666;
+	line-height: 1.4;
+	display: -webkit-box;
+	-webkit-line-clamp: 1;
+	-webkit-box-orient: vertical;
+	overflow: hidden;
+	text-overflow: ellipsis;
+}
+
+.loading-container {
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	margin-top: 50rpx;
+}
+
+.loading-spinner {
+	width: 60rpx;
+	height: 60rpx;
+	border: 4rpx solid rgba(116, 200, 101, 0.2);
+	border-top: 4rpx solid #74c865;
+	border-radius: 50%;
+	animation: spin 1s linear infinite;
+	margin-bottom: 20rpx;
+}
+
+@keyframes spin {
+	0% { transform: rotate(0deg); }
+	100% { transform: rotate(360deg); }
+}
+
+.loading-text {
+	font-size: 28rpx;
+	color: #5a6c7d;
+}
+
+.pagination {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	margin-top: 20rpx;
+	padding: 10rpx 15rpx;
+	background: #f8f9fa;
+	border-radius: 8rpx;
+}
+
+.pagination-controls {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	width: 100%;
+	max-width: 500rpx;
+}
+
+.pagination-btn {
+	background: linear-gradient(135deg, #74c865 0%, #aaeb9f 100%);
+	color: white;
+	border: none;
+	border-radius: 15rpx;
+	padding: 6rpx 12rpx;
+	font-size: 20rpx;
+	cursor: pointer;
+	transition: all 0.3s ease;
+	min-width: 50rpx;
+	white-space: nowrap;
+}
+
+.pagination-btn:hover:not(.disabled) {
+	transform: translateY(-1rpx);
+	box-shadow: 0 2rpx 8rpx rgba(116, 200, 101, 0.3);
+}
+
+.pagination-btn.disabled {
+	background: #e0e0e0;
+	color: #999;
+	cursor: not-allowed;
+	transform: none;
+	box-shadow: none;
+}
+
+.pagination-info {
+	display: flex;
+	align-items: center;
+}
+
+.pagination-text {
+	font-size: 20rpx;
 	color: #666;
 }
 </style>
