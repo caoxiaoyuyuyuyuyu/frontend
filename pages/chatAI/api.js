@@ -3,9 +3,7 @@
  * 包含AI对话、历史记录管理、后端API连接等功能
  */
 
-// 基础配置
-const BASE_URL = 'http://192.168.241.56:5000'; // 后端API地址
-const API_VERSION = 'api';
+import { getApiUrl, getHeaders, request, uploadFile } from '../../utils/apiConfig.js';
 
 /**
  * 发送AI对话消息
@@ -16,29 +14,8 @@ const API_VERSION = 'api';
  * @param {Boolean} messageData.hasQuote - 是否包含引用
  * @returns {Promise} 返回AI回复
  */
-export const sendAIMessage = (messageData) => {
-  return new Promise((resolve, reject) => {
-    uni.request({
-      url: `${BASE_URL}/${API_VERSION}/chat/send`,
-      method: 'POST',
-      data: messageData,
-      header: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${uni.getStorageSync('token') || ''}`
-      },
-      success: (res) => {
-        if (res.statusCode === 200) {
-          resolve(res.data);
-        } else {
-          reject(new Error(res.data.message || '发送消息失败'));
-        }
-      },
-      fail: (err) => {
-        reject(new Error('网络请求失败'));
-      }
-    });
-  });
-};
+export const sendAIMessage = (data) =>
+  request({ url: '/chat/send', method: 'POST', data });
 
 /**
  * 保存对话到后端
@@ -49,58 +26,16 @@ export const sendAIMessage = (messageData) => {
  * @param {Array} chatData.messages - 消息列表
  * @returns {Promise} 保存结果
  */
-export const saveChatToBackend = (chatData) => {
-  return new Promise((resolve, reject) => {
-    uni.request({
-      url: `${BASE_URL}/${API_VERSION}/chat/save`,
-      method: 'POST',
-      data: chatData,
-      header: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${uni.getStorageSync('token') || ''}`
-      },
-      success: (res) => {
-        if (res.statusCode === 200) {
-          resolve(res.data);
-        } else {
-          reject(new Error(res.data.message || '保存对话失败'));
-        }
-      },
-      fail: (err) => {
-        reject(new Error('网络请求失败'));
-      }
-    });
-  });
-};
+export const saveChatToBackend = (chat) =>
+  request({ url: '/chat/save', method: 'POST', data: chat });
 
 /**
  * 从后端加载历史对话列表
  * @param {Object} params - 请求参数
  * @returns {Promise} 返回历史对话列表
  */
-export const loadHistoryChats = (params = {}) => {
-  return new Promise((resolve, reject) => {
-    uni.request({
-      url: `${BASE_URL}/${API_VERSION}/chat/history`,
-      method: 'GET',
-      data: params,
-      header: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${uni.getStorageSync('token') || ''}`
-      },
-      success: (res) => {
-        if (res.statusCode === 200) {
-          resolve(res.data);
-        } else {
-          reject(new Error(res.data.message || '获取历史记录失败'));
-        }
-      },
-      fail: (err) => {
-        reject(new Error('网络请求失败'));
-      }
-    });
-  });
-};
+export const loadHistoryChats = (params = {}) =>
+  request({ url: '/chat/history', method: 'GET', data: params });
 
 /**
  * 获取指定对话详情
@@ -108,25 +43,9 @@ export const loadHistoryChats = (params = {}) => {
  * @returns {Promise} 返回对话详情
  */
 export const getChatDetail = (chatId) => {
-  return new Promise((resolve, reject) => {
-    uni.request({
-      url: `${BASE_URL}/${API_VERSION}/chat/${chatId}`,
-      method: 'GET',
-      header: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${uni.getStorageSync('token') || ''}`
-      },
-      success: (res) => {
-        if (res.statusCode === 200) {
-          resolve(res.data);
-        } else {
-          reject(new Error(res.data.message || '获取对话详情失败'));
-        }
-      },
-      fail: (err) => {
-        reject(new Error('网络请求失败'));
-      }
-    });
+  return request({
+    url: `/chat/${chatId}`,
+    method: 'GET'
   });
 };
 
@@ -135,55 +54,8 @@ export const getChatDetail = (chatId) => {
  * @param {String} chatId - 对话ID
  * @returns {Promise} 返回删除结果
  */
-export const deleteChat = (chatId) => {
-  return new Promise((resolve, reject) => {
-    uni.request({
-      url: `${BASE_URL}/${API_VERSION}/chat/${chatId}`,
-      method: 'DELETE',
-      header: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${uni.getStorageSync('token') || ''}`
-      },
-      success: (res) => {
-        if (res.statusCode === 200) {
-          resolve(res.data);
-        } else {
-          reject(new Error(res.data.message || '删除对话失败'));
-        }
-      },
-      fail: (err) => {
-        reject(new Error('网络请求失败'));
-      }
-    });
-  });
-};
-
-/**
- * 清空所有对话
- * @returns {Promise} 返回清空结果
- */
-export const clearAllChats = () => {
-  return new Promise((resolve, reject) => {
-    uni.request({
-      url: `${BASE_URL}/${API_VERSION}/chat/clear-all`,
-      method: 'DELETE',
-      header: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${uni.getStorageSync('token') || ''}`
-      },
-      success: (res) => {
-        if (res.statusCode === 200) {
-          resolve(res.data);
-        } else {
-          reject(new Error(res.data.message || '清空对话失败'));
-        }
-      },
-      fail: (err) => {
-        reject(new Error('网络请求失败'));
-      }
-    });
-  });
-};
+export const deleteChat = (chatId) =>
+  request({ url: `/chat/${chatId}`, method: 'DELETE' });
 
 /**
  * 搜索对话内容
@@ -191,43 +63,15 @@ export const clearAllChats = () => {
  * @param {String} filterType - 筛选类型 (all/today/week/month)
  * @returns {Promise} 返回搜索结果
  */
-export const searchChats = (keyword, filterType = 'all') => {
-  return new Promise((resolve, reject) => {
-    uni.request({
-      url: `${BASE_URL}/${API_VERSION}/chat/search`,
-      method: 'GET',
-      data: {
-        keyword: keyword,
-        filterType: filterType
-      },
-      header: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${uni.getStorageSync('token') || ''}`
-      },
-      success: (res) => {
-        if (res.statusCode === 200) {
-          resolve(res.data);
-        } else {
-          reject(new Error(res.data.message || '搜索对话失败'));
-        }
-      },
-      fail: (err) => {
-        reject(new Error('网络请求失败'));
-      }
-    });
-  });
-};
+export const searchChats = (keyword, filterType = 'all') =>
+  request({ url: '/chat/search', method: 'GET', data: { keyword, filterType } });
 
 /**
  * 设置选中的对话（临时存储）
  * @param {Object} chat - 对话数据
  */
 export const setSelectedChat = (chat) => {
-  try {
-    uni.setStorageSync('selectedChat', chat);
-  } catch (error) {
-    console.error('设置选中对话失败:', error);
-  }
+  try { uni.setStorageSync('selectedChat', chat); } catch (e) { console.error('设置选中对话失败', e); }
 };
 
 /**
@@ -236,16 +80,10 @@ export const setSelectedChat = (chat) => {
  */
 export const getSelectedChat = () => {
   try {
-    const selectedChat = uni.getStorageSync('selectedChat');
-    if (selectedChat) {
-      uni.removeStorageSync('selectedChat');
-      return selectedChat;
-    }
-    return null;
-  } catch (error) {
-    console.error('获取选中对话失败:', error);
-    return null;
-  }
+    const chat = uni.getStorageSync('selectedChat');
+    if (chat) uni.removeStorageSync('selectedChat');
+    return chat || null;
+  } catch (e) { console.error('获取选中对话失败', e); return null; }
 };
 
 /**
@@ -253,19 +91,14 @@ export const getSelectedChat = () => {
  * @param {String} content - 消息内容
  * @returns {Promise} 复制结果
  */
-export const copyMessage = (content) => {
-  return new Promise((resolve, reject) => {
+export const copyMessage = (content) =>
+  new Promise((resolve, reject) => {
     uni.setClipboardData({
       data: content,
-      success: () => {
-        resolve({ success: true });
-      },
-      fail: (err) => {
-        reject(new Error('复制失败'));
-      }
+      success: () => resolve({ success: true }),
+      fail: () => reject(new Error('复制失败'))
     });
   });
-};
 
 /**
  * 提交反馈
@@ -275,29 +108,8 @@ export const copyMessage = (content) => {
  * @param {String} feedbackData.chatId - 对话ID
  * @returns {Promise} 提交结果
  */
-export const submitFeedback = (feedbackData) => {
-  return new Promise((resolve, reject) => {
-    uni.request({
-      url: `${BASE_URL}/${API_VERSION}/chat/feedback`,
-      method: 'POST',
-      data: feedbackData,
-      header: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${uni.getStorageSync('token') || ''}`
-      },
-      success: (res) => {
-        if (res.statusCode === 200) {
-          resolve(res.data);
-        } else {
-          reject(new Error(res.data.message || '提交反馈失败'));
-        }
-      },
-      fail: (err) => {
-        reject(new Error('网络请求失败'));
-      }
-    });
-  });
-};
+export const submitFeedback = (feedback) =>
+  request({ url: '/chat/feedback', method: 'POST', data: feedback });
 
 /**
  * 获取当前时间
@@ -305,9 +117,7 @@ export const submitFeedback = (feedbackData) => {
  */
 export const getCurrentTime = () => {
   const now = new Date();
-  const hours = now.getHours().toString().padStart(2, '0');
-  const minutes = now.getMinutes().toString().padStart(2, '0');
-  return `${hours}:${minutes}`;
+  return `${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}`;
 };
 
 /**
@@ -316,21 +126,14 @@ export const getCurrentTime = () => {
  */
 export const getCurrentDateTime = () => {
   const now = new Date();
-  const year = now.getFullYear();
-  const month = (now.getMonth() + 1).toString().padStart(2, '0');
-  const day = now.getDate().toString().padStart(2, '0');
-  const hours = now.getHours().toString().padStart(2, '0');
-  const minutes = now.getMinutes().toString().padStart(2, '0');
-  return `${year}-${month}-${day} ${hours}:${minutes}`;
+  return `${now.getFullYear()}-${(now.getMonth()+1).toString().padStart(2,'0')}-${now.getDate().toString().padStart(2,'0')} ${now.getHours().toString().padStart(2,'0')}:${now.getMinutes().toString().padStart(2,'0')}`;
 };
 
 /**
  * 生成对话ID
  * @returns {String} 对话ID
  */
-export const generateChatId = () => {
-  return 'chat' + Date.now();
-};
+export const generateChatId = () => 'chat' + Date.now();
 
 /**
  * 获取对话标题
@@ -338,13 +141,8 @@ export const generateChatId = () => {
  * @returns {String} 对话标题
  */
 export const getChatTitle = (messages) => {
-  const userMessages = messages.filter(msg => msg.type === 'user');
-  if (userMessages.length > 0) {
-    const firstUserMessage = userMessages[0];
-    return firstUserMessage.content.length > 20 
-      ? firstUserMessage.content.substring(0, 20) + '...' 
-      : firstUserMessage.content;
-  }
+  const userMsg = messages.find(msg => msg.type === 'user');
+  if (userMsg) return userMsg.content.length > 20 ? userMsg.content.slice(0, 20) + '...' : userMsg.content;
   return '新对话';
 };
 
@@ -354,10 +152,9 @@ export const getChatTitle = (messages) => {
  * @returns {String} 预览文本
  */
 export const getMessagePreview = (messages) => {
-  if (messages.length === 0) return '';
-  const lastMessage = messages[messages.length - 1];
-  const text = lastMessage.content;
-  return text.length > 30 ? text.substring(0, 30) + '...' : text;
+  if (!messages.length) return '';
+  const text = messages[messages.length - 1].content;
+  return text.length > 30 ? text.slice(0, 30) + '...' : text;
 };
 
 /**
@@ -367,27 +164,10 @@ export const getMessagePreview = (messages) => {
  * @returns {Promise} 返回识别结果
  */
 export const identifyImage = (imagePath, params = {}) => {
-  return new Promise((resolve, reject) => {
-    uni.uploadFile({
-      url: `${BASE_URL}/${API_VERSION}/chat/identify`,
-      filePath: imagePath,
-      name: 'image',
-      formData: params,
-      header: {
-        'Authorization': `Bearer ${uni.getStorageSync('token') || ''}`
-      },
-      success: (res) => {
-        if (res.statusCode === 200) {
-          const data = JSON.parse(res.data);
-          resolve(data);
-        } else {
-          reject(new Error('图片识别失败'));
-        }
-      },
-      fail: (err) => {
-        reject(new Error('网络请求失败'));
-      }
-    });
+  return uploadFile({
+    url: '/chat/identify',
+    filePath: imagePath,
+    formData: params
   });
 };
 
@@ -397,53 +177,11 @@ export const identifyImage = (imagePath, params = {}) => {
  * @returns {Promise} 返回登录结果
  */
 export const userLogin = (loginData) => {
-  return new Promise((resolve, reject) => {
-    uni.request({
-      url: `${BASE_URL}/${API_VERSION}/auth/login`,
-      method: 'POST',
-      data: loginData,
-      header: {
-        'Content-Type': 'application/json'
-      },
-      success: (res) => {
-        if (res.statusCode === 200) {
-          resolve(res.data);
-        } else {
-          reject(new Error(res.data.message || '登录失败'));
-        }
-      },
-      fail: (err) => {
-        reject(new Error('网络请求失败'));
-      }
-    });
-  });
-};
-
-/**
- * 用户注册
- * @param {Object} registerData - 注册数据
- * @returns {Promise} 返回注册结果
- */
-export const userRegister = (registerData) => {
-  return new Promise((resolve, reject) => {
-    uni.request({
-      url: `${BASE_URL}/${API_VERSION}/auth/register`,
-      method: 'POST',
-      data: registerData,
-      header: {
-        'Content-Type': 'application/json'
-      },
-      success: (res) => {
-        if (res.statusCode === 200) {
-          resolve(res.data);
-        } else {
-          reject(new Error(res.data.message || '注册失败'));
-        }
-      },
-      fail: (err) => {
-        reject(new Error('网络请求失败'));
-      }
-    });
+  return request({
+    url: '/auth/login',
+    method: 'POST',
+    data: loginData,
+    headers: { 'Content-Type': 'application/json' }
   });
 };
 
@@ -452,25 +190,9 @@ export const userRegister = (registerData) => {
  * @returns {Promise} 返回用户信息
  */
 export const getUserInfo = () => {
-  return new Promise((resolve, reject) => {
-    uni.request({
-      url: `${BASE_URL}/${API_VERSION}/user/info`,
-      method: 'GET',
-      header: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${uni.getStorageSync('token') || ''}`
-      },
-      success: (res) => {
-        if (res.statusCode === 200) {
-          resolve(res.data);
-        } else {
-          reject(new Error(res.data.message || '获取用户信息失败'));
-        }
-      },
-      fail: (err) => {
-        reject(new Error('网络请求失败'));
-      }
-    });
+  return request({
+    url: '/user/info',
+    method: 'GET'
   });
 };
 
@@ -480,26 +202,10 @@ export const getUserInfo = () => {
  * @returns {Promise} 返回更新结果
  */
 export const updateUserInfo = (userData) => {
-  return new Promise((resolve, reject) => {
-    uni.request({
-      url: `${BASE_URL}/${API_VERSION}/user/info`,
-      method: 'PUT',
-      data: userData,
-      header: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${uni.getStorageSync('token') || ''}`
-      },
-      success: (res) => {
-        if (res.statusCode === 200) {
-          resolve(res.data);
-        } else {
-          reject(new Error(res.data.message || '更新用户信息失败'));
-        }
-      },
-      fail: (err) => {
-        reject(new Error('网络请求失败'));
-      }
-    });
+  return request({
+    url: '/user/info',
+    method: 'PUT',
+    data: userData
   });
 };
 
@@ -509,7 +215,6 @@ export default {
   loadHistoryChats,
   getChatDetail,
   deleteChat,
-  clearAllChats,
   searchChats,
   setSelectedChat,
   getSelectedChat,
@@ -522,7 +227,6 @@ export default {
   getMessagePreview,
   identifyImage,
   userLogin,
-  userRegister,
   getUserInfo,
   updateUserInfo
 }; 

@@ -1,0 +1,1 @@
+<view wx:if="{{a}}" class="login-popup-mask"><view class="login-popup-box"><image src="{{b}}" mode="widthFix" class="login-popup-logo"/><view class="login-popup-title">请先登录</view><button open-type="getUserInfo" bindgetuserinfo="{{c}}" class="login-popup-btn"> 微信一键登录 </button></view></view>
