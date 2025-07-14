@@ -1,5 +1,7 @@
 <template>
     <view class="container">
+        <!-- 登录弹窗组件 -->
+        <login v-if="showLoginPopup" :show="showLoginPopup" @success="onLoginSuccess" />
         <!-- 顶部标题区域 -->
         <view class="header">
             <view class="title-container">
@@ -53,16 +55,39 @@
 </template>
 
 <script>
+    import login from '../../components/login/login.vue'
     export default {
+        components: { login },
         data() {
             return {
-                title: '智慧农业'
+                title: '智慧农业',
+                showLoginPopup: false,
+                hasLogin: false,
+                userInfo: {}
             }
         },
         onLoad() {
-            // 页面加载时的初始化
+            this.checkLogin();
         },
         methods: {
+            // 检查登录状态
+            checkLogin() {
+                const token = uni.getStorageSync('token')
+                if (token) {
+                    this.hasLogin = true
+                    this.userInfo = uni.getStorageSync('userInfo') || {}
+                    this.showLoginPopup = false
+                } else {
+                    this.hasLogin = false
+                    this.showLoginPopup = true
+                }
+            },
+            // 登录弹窗回调
+            onLoginSuccess(userInfo) {
+                this.hasLogin = true
+                this.userInfo = userInfo
+                this.showLoginPopup = false
+            },
             // 拍照功能
             takePhoto() {
                 uni.chooseImage({

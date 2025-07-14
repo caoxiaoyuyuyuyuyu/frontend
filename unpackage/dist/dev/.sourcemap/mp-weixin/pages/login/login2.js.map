@@ -1,0 +1,1 @@
+{"version":3,"file":"login2.js","sources":["../../HBuilderX/plugins/uniapp-cli-vite/uniPage:/QzovQUkvRlBESVMvZnJvbnRlbmQvcGFnZXMvbG9naW4vbG9naW4udnVl"],"sourcesContent":["import MiniProgramPage from 'C:/AI/FPDIS/frontend/pages/login/login.vue'\nwx.createPage(MiniProgramPage)"],"names":["MiniProgramPage"],"mappings":";;AACA,GAAG,WAAWA,MAAe,eAAA;"}

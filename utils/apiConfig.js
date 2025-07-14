@@ -99,13 +99,21 @@ export const responseInterceptor = (response) => {
   if (response.statusCode === 200) {
     return response.data;
   } else if (response.statusCode === 401) {
-    // 未授权，清除token并跳转到登录页
+    // 未授权，清除token并弹窗跳转到登录页
     uni.removeStorageSync('token');
-    uni.showToast({
-      title: '登录已过期，请重新登录',
-      icon: 'none'
+    uni.showModal({
+      title: '提示',
+      content: '登录已过期，请重新登录',
+      showCancel: false,
+      confirmText: '去登录',
+      success: (res) => {
+        if (res.confirm) {
+          uni.navigateTo({
+            url: '/pages/login/login'
+          });
+        }
+      }
     });
-    // 可以在这里跳转到登录页
     return Promise.reject(new Error('登录已过期'));
   } else if (response.statusCode === 403) {
     return Promise.reject(new Error('没有权限访问'));
