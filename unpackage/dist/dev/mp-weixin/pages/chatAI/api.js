@@ -1,212 +1,57 @@
 "use strict";
 const common_vendor = require("../../common/vendor.js");
-const BASE_URL = "http://192.168.241.56:5000";
-const API_VERSION = "api";
-const sendAIMessage = (messageData) => {
-  return new Promise((resolve, reject) => {
-    common_vendor.index.request({
-      url: `${BASE_URL}/${API_VERSION}/chat/send`,
-      method: "POST",
-      data: messageData,
-      header: {
-        "Content-Type": "application/json",
-        "Authorization": `Bearer ${common_vendor.index.getStorageSync("token") || ""}`
-      },
-      success: (res) => {
-        if (res.statusCode === 200) {
-          resolve(res.data);
-        } else {
-          reject(new Error(res.data.message || "发送消息失败"));
-        }
-      },
-      fail: (err) => {
-        reject(new Error("网络请求失败"));
-      }
-    });
-  });
-};
-const saveChatToBackend = (chatData) => {
-  return new Promise((resolve, reject) => {
-    common_vendor.index.request({
-      url: `${BASE_URL}/${API_VERSION}/chat/save`,
-      method: "POST",
-      data: chatData,
-      header: {
-        "Content-Type": "application/json",
-        "Authorization": `Bearer ${common_vendor.index.getStorageSync("token") || ""}`
-      },
-      success: (res) => {
-        if (res.statusCode === 200) {
-          resolve(res.data);
-        } else {
-          reject(new Error(res.data.message || "保存对话失败"));
-        }
-      },
-      fail: (err) => {
-        reject(new Error("网络请求失败"));
-      }
-    });
-  });
-};
-const loadHistoryChats = (params = {}) => {
-  return new Promise((resolve, reject) => {
-    common_vendor.index.request({
-      url: `${BASE_URL}/${API_VERSION}/chat/history`,
-      method: "GET",
-      data: params,
-      header: {
-        "Content-Type": "application/json",
-        "Authorization": `Bearer ${common_vendor.index.getStorageSync("token") || ""}`
-      },
-      success: (res) => {
-        if (res.statusCode === 200) {
-          resolve(res.data);
-        } else {
-          reject(new Error(res.data.message || "获取历史记录失败"));
-        }
-      },
-      fail: (err) => {
-        reject(new Error("网络请求失败"));
-      }
-    });
-  });
-};
-const deleteChat = (chatId) => {
-  return new Promise((resolve, reject) => {
-    common_vendor.index.request({
-      url: `${BASE_URL}/${API_VERSION}/chat/${chatId}`,
-      method: "DELETE",
-      header: {
-        "Content-Type": "application/json",
-        "Authorization": `Bearer ${common_vendor.index.getStorageSync("token") || ""}`
-      },
-      success: (res) => {
-        if (res.statusCode === 200) {
-          resolve(res.data);
-        } else {
-          reject(new Error(res.data.message || "删除对话失败"));
-        }
-      },
-      fail: (err) => {
-        reject(new Error("网络请求失败"));
-      }
-    });
-  });
-};
-const searchChats = (keyword, filterType = "all") => {
-  return new Promise((resolve, reject) => {
-    common_vendor.index.request({
-      url: `${BASE_URL}/${API_VERSION}/chat/search`,
-      method: "GET",
-      data: {
-        keyword,
-        filterType
-      },
-      header: {
-        "Content-Type": "application/json",
-        "Authorization": `Bearer ${common_vendor.index.getStorageSync("token") || ""}`
-      },
-      success: (res) => {
-        if (res.statusCode === 200) {
-          resolve(res.data);
-        } else {
-          reject(new Error(res.data.message || "搜索对话失败"));
-        }
-      },
-      fail: (err) => {
-        reject(new Error("网络请求失败"));
-      }
-    });
-  });
-};
+const utils_apiConfig = require("../../utils/apiConfig.js");
+const sendAIMessage = (data) => utils_apiConfig.request({ url: "/chat/send", method: "POST", data });
+const saveChatToBackend = (chat) => utils_apiConfig.request({ url: "/chat/save", method: "POST", data: chat });
+const loadHistoryChats = (params = {}) => utils_apiConfig.request({ url: "/chat/history", method: "GET", data: params });
+const deleteChat = (chatId) => utils_apiConfig.request({ url: `/chat/${chatId}`, method: "DELETE" });
+const searchChats = (keyword, filterType = "all") => utils_apiConfig.request({ url: "/chat/search", method: "GET", data: { keyword, filterType } });
 const setSelectedChat = (chat) => {
   try {
     common_vendor.index.setStorageSync("selectedChat", chat);
-  } catch (error) {
-    common_vendor.index.__f__("error", "at pages/chatAI/api.js:229", "设置选中对话失败:", error);
+  } catch (e) {
+    common_vendor.index.__f__("error", "at pages/chatAI/api.js:74", "设置选中对话失败", e);
   }
 };
 const getSelectedChat = () => {
   try {
-    const selectedChat = common_vendor.index.getStorageSync("selectedChat");
-    if (selectedChat) {
+    const chat = common_vendor.index.getStorageSync("selectedChat");
+    if (chat)
       common_vendor.index.removeStorageSync("selectedChat");
-      return selectedChat;
-    }
-    return null;
-  } catch (error) {
-    common_vendor.index.__f__("error", "at pages/chatAI/api.js:246", "获取选中对话失败:", error);
+    return chat || null;
+  } catch (e) {
+    common_vendor.index.__f__("error", "at pages/chatAI/api.js:86", "获取选中对话失败", e);
     return null;
   }
 };
-const copyMessage = (content) => {
-  return new Promise((resolve, reject) => {
-    common_vendor.index.setClipboardData({
-      data: content,
-      success: () => {
-        resolve({ success: true });
-      },
-      fail: (err) => {
-        reject(new Error("复制失败"));
-      }
-    });
+const copyMessage = (content) => new Promise((resolve, reject) => {
+  common_vendor.index.setClipboardData({
+    data: content,
+    success: () => resolve({ success: true }),
+    fail: () => reject(new Error("复制失败"))
   });
-};
-const submitFeedback = (feedbackData) => {
-  return new Promise((resolve, reject) => {
-    common_vendor.index.request({
-      url: `${BASE_URL}/${API_VERSION}/chat/feedback`,
-      method: "POST",
-      data: feedbackData,
-      header: {
-        "Content-Type": "application/json",
-        "Authorization": `Bearer ${common_vendor.index.getStorageSync("token") || ""}`
-      },
-      success: (res) => {
-        if (res.statusCode === 200) {
-          resolve(res.data);
-        } else {
-          reject(new Error(res.data.message || "提交反馈失败"));
-        }
-      },
-      fail: (err) => {
-        reject(new Error("网络请求失败"));
-      }
-    });
-  });
-};
+});
+const submitFeedback = (feedback) => utils_apiConfig.request({ url: "/chat/feedback", method: "POST", data: feedback });
 const getCurrentTime = () => {
   const now = /* @__PURE__ */ new Date();
-  const hours = now.getHours().toString().padStart(2, "0");
-  const minutes = now.getMinutes().toString().padStart(2, "0");
-  return `${hours}:${minutes}`;
+  return `${now.getHours().toString().padStart(2, "0")}:${now.getMinutes().toString().padStart(2, "0")}`;
 };
 const getCurrentDateTime = () => {
   const now = /* @__PURE__ */ new Date();
-  const year = now.getFullYear();
-  const month = (now.getMonth() + 1).toString().padStart(2, "0");
-  const day = now.getDate().toString().padStart(2, "0");
-  const hours = now.getHours().toString().padStart(2, "0");
-  const minutes = now.getMinutes().toString().padStart(2, "0");
-  return `${year}-${month}-${day} ${hours}:${minutes}`;
+  return `${now.getFullYear()}-${(now.getMonth() + 1).toString().padStart(2, "0")}-${now.getDate().toString().padStart(2, "0")} ${now.getHours().toString().padStart(2, "0")}:${now.getMinutes().toString().padStart(2, "0")}`;
 };
-const generateChatId = () => {
-  return "chat" + Date.now();
-};
+const generateChatId = () => "chat" + Date.now();
 const getChatTitle = (messages) => {
-  const userMessages = messages.filter((msg) => msg.type === "user");
-  if (userMessages.length > 0) {
-    const firstUserMessage = userMessages[0];
-    return firstUserMessage.content.length > 20 ? firstUserMessage.content.substring(0, 20) + "..." : firstUserMessage.content;
-  }
+  const userMsg = messages.find((msg) => msg.type === "user");
+  if (userMsg)
+    return userMsg.content.length > 20 ? userMsg.content.slice(0, 20) + "..." : userMsg.content;
   return "新对话";
 };
 const getMessagePreview = (messages) => {
-  if (messages.length === 0)
+  if (!messages.length)
     return "";
-  const lastMessage = messages[messages.length - 1];
-  const text = lastMessage.content;
-  return text.length > 30 ? text.substring(0, 30) + "..." : text;
+  const text = messages[messages.length - 1].content;
+  return text.length > 30 ? text.slice(0, 30) + "..." : text;
 };
 exports.copyMessage = copyMessage;
 exports.deleteChat = deleteChat;

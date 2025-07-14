@@ -1,16 +1,26 @@
 "use strict";
-<<<<<<< HEAD
-const common_vendor = require("../../common/vendor.js");
-const common_assets = require("../../common/assets.js");
+const common_vendor = require("./common/vendor.js");
+const common_assets = require("./common/assets.js");
 const _sfc_main = {
+  name: "LoginPopup",
+  props: {
+    show: {
+      type: Boolean,
+      default: false
+    }
+  },
   data() {
     return {
       hasLogin: false,
       userInfo: {}
     };
   },
-  onLoad() {
-    this.checkLogin();
+  watch: {
+    show(val) {
+      if (val) {
+        this.checkLogin();
+      }
+    }
   },
   methods: {
     // 检查登录状态
@@ -19,6 +29,7 @@ const _sfc_main = {
       if (token) {
         this.hasLogin = true;
         this.userInfo = common_vendor.index.getStorageSync("userInfo") || {};
+        this.$emit("success", this.userInfo);
       }
     },
     // 获取用户信息
@@ -34,7 +45,7 @@ const _sfc_main = {
           provider: "weixin"
         });
         const res = await common_vendor.index.request({
-          url: "http://localhost:5000/api/auth/login",
+          url: "http://192.168.241.56:5000/api/auth/login",
           method: "POST",
           data: {
             code: loginRes.code,
@@ -48,9 +59,7 @@ const _sfc_main = {
           this.userInfo = res.data.data.userInfo;
           common_vendor.index.hideLoading();
           common_vendor.index.showToast({ title: "登录成功" });
-          setTimeout(() => {
-            common_vendor.index.reLaunch({ url: "/pages/index/index" });
-          }, 1500);
+          this.$emit("success", this.userInfo);
         } else {
           common_vendor.index.hideLoading();
           common_vendor.index.showToast({ title: res.data.message || "登录失败", icon: "none" });
@@ -58,25 +67,19 @@ const _sfc_main = {
       } catch (error) {
         common_vendor.index.hideLoading();
         common_vendor.index.showToast({ title: "网络错误，请重试", icon: "none" });
-        common_vendor.index.__f__("error", "at pages/login/login.vue:87", "登录错误:", error);
+        common_vendor.index.__f__("error", "at pages/login/login.vue:89", "登录错误:", error);
       }
     }
   }
 };
 function _sfc_render(_ctx, _cache, $props, $setup, $data, $options) {
   return common_vendor.e({
-    a: !$data.hasLogin
-  }, !$data.hasLogin ? {
+    a: $props.show
+  }, $props.show ? {
     b: common_assets._imports_0$3,
     c: common_vendor.o((...args) => $options.handleGetUserInfo && $options.handleGetUserInfo(...args))
-  } : {
-    d: common_vendor.t($data.userInfo.nickname)
-  });
+  } : {});
 }
 const MiniProgramPage = /* @__PURE__ */ common_vendor._export_sfc(_sfc_main, [["render", _sfc_render]]);
-wx.createPage(MiniProgramPage);
-=======
-const login = require("../../login.js");
-wx.createPage(login.MiniProgramPage);
->>>>>>> cdn
-//# sourceMappingURL=../../../.sourcemap/mp-weixin/pages/login/login.js.map
+exports.MiniProgramPage = MiniProgramPage;
+//# sourceMappingURL=../.sourcemap/mp-weixin/login.js.map
