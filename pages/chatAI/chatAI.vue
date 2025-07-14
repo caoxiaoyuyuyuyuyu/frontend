@@ -1,31 +1,12 @@
 <template>
 	<view class="chat-container">
-
-		
-		<!-- 顶部标题栏 -->
-		<view class="header">
-			<view class="header-left">
-				<view class="header-btn" @tap="showHistorySidebar">
-					<view class="hamburger-icon">
-						<view class="line"></view>
-						<view class="line"></view>
-					</view>
-				</view>
-			</view>
-			<view class="header-center">
-				<text class="title">智慧害虫AI问答助手</text>
-			</view>
-			<view class="header-right">
-				<view class="header-btn" @tap="createNewChat">
-					<text class="header-icon">+</text>
-				</view>
-			</view>
-		</view>
-		
 		<!-- 搜索栏 -->
 		<view class="search-container">
+			<view class="history-btn" @tap="showHistorySidebar">
+				<image src="/static/history.png" class="history-icon"></image>
+			</view>
 			<view class="search-box">
-				<view class="search-icon">🔍</view>
+				<image src="/static/search.png" class="search-icon"></image>
 				<input 
 					class="search-input" 
 					v-model="searchKeyword" 
@@ -37,6 +18,13 @@
 					<text class="clear-icon">×</text>
 				</view>
 			</view>
+			<button 
+				class="new-chat-btn" 
+				@tap="createNewChat"
+				:disabled="isLoading"
+			>
+				<image src="/static/add.png" class="new-chat-icon"></image>
+			</button>
 		</view>
 		
 		<!-- 聊天消息列表 -->
@@ -51,18 +39,7 @@
 			<view v-if="messageList.length === 0" class="welcome-container">
 				<view class="welcome-content">
 					<text class="welcome-title">欢迎使用智慧害虫AI问答助手</text>
-					<text class="welcome-subtitle">我可以帮您识别各种害虫并提供专业建议</text>
-					<view class="welcome-features">
-						<view class="feature-item">
-							<text class="feature-text">智能识别害虫</text>
-						</view>
-						<view class="feature-item">
-							<text class="feature-text">专业防治建议</text>
-						</view>
-						<view class="feature-item">
-							<text class="feature-text">拍照上传识别</text>
-						</view>
-					</view>
+					<text class="welcome-subtitle">我可以帮您识别各种害虫并提供专业建议，请详细描述您遇到的问题</text>		
 				</view>
 			</view>
 			
@@ -80,9 +57,29 @@
 						></image>
 					</view>
 					<view class="message-bubble">
-						<text v-if="!message.image" class="message-text">{{ message.content }}</text>
+						<!-- 引用内容显示 -->
+						<text v-if="message.hasQuote" class="quote-content">{{ getQuoteContent(message.content) }}</text>
+						<!-- 分隔线 -->
+						<view v-if="message.hasQuote" class="quote-divider"></view>
+						<text v-if="!message.image" class="message-text">{{ getMainContent(message.content) }}</text>
 						<image v-if="message.image" :src="message.image" class="message-image" mode="aspectFit"></image>
 						<text class="message-time">{{ message.time }}</text>
+						
+						<!-- AI消息的操作按钮 -->
+						<view v-if="message.type === 'ai'" class="message-actions">
+							<view class="action-btn" @tap="copyMessage(message.content)">
+								<image src="/static/copy.png" class="action-icon"></image>
+							</view>
+							<view class="action-btn" @tap="quoteMessage(message)">
+								<image src="/static/quote.png" class="action-icon"></image>
+							</view>
+							<view class="action-btn" @tap="toggleStar(message, index)">
+								<image :src="message.starred ? '/static/stars.png' : '/static/star.png'" class="action-icon"></image>
+							</view>
+							<view class="action-btn" @tap="feedbackMessage(message)">
+								<image src="/static/notification.png" class="action-icon"></image>
+							</view>
+						</view>
 					</view>
 				</view>
 			</view>
@@ -104,16 +101,20 @@
 			</view>
 		</scroll-view>
 		
+		<!-- 引用提示框 -->
+		<view v-if="quotedMessage" class="quote-container">
+			<view class="quote-content">
+				<text class="quote-label">引用：</text>
+				<text class="quote-text">{{ quotedMessage.content }}</text>
+				<view class="quote-close" @tap="clearQuote">
+					<text class="close-icon">×</text>
+				</view>
+			</view>
+		</view>
+		
 		<!-- 底部输入区域 -->
 		<view class="input-area">
 			<view class="input-container">
-				<button 
-					class="plus-btn" 
-					@tap="showImageOptions"
-					:disabled="isLoading"
-				>
-					<text class="plus-icon">+</text>
-				</button>
 				<input 
 					class="message-input" 
 					v-model="inputMessage" 
@@ -126,7 +127,7 @@
 					:disabled="!inputMessage.trim() || isLoading"
 					@tap="sendMessage"
 				>
-					发送
+					<image src="/static/up.png" class="send-icon"></image>
 				</button>
 			</view>
 		</view>
@@ -134,6 +135,18 @@
 </template>
 
 <script>
+	import { 
+		sendAIMessage, 
+		saveChatToBackend, 
+		getSelectedChat, 
+		copyMessage, 
+		submitFeedback,
+		getCurrentTime,
+		getCurrentDateTime,
+		generateChatId,
+		getChatTitle
+	} from './api.js';
+	
 	export default {
 		data() {
 			return {
@@ -148,25 +161,25 @@
 				historyChats: [], // 历史对话列表
 				searchKeyword: '', // 搜索关键词
 				searchResults: [], // 搜索结果
+				quotedMessage: null, // 引用的消息
 			}
 		},
 		onLoad() {
 			// 页面加载时初始化新对话状态
 			this.messageList = [];
-			this.currentChatId = 'chat' + Date.now();
+			this.currentChatId = generateChatId();
 			this.inputMessage = '';
 		},
 		onShow() {
 			// 检查是否有从历史页面传递过来的对话数据
-			const selectedChat = uni.getStorageSync('selectedChat');
+			const selectedChat = getSelectedChat();
 			if (selectedChat) {
 				console.log('检测到历史对话数据:', selectedChat);
 				this.loadChat(selectedChat);
-				uni.removeStorageSync('selectedChat');
 			} else {
 				// 如果没有选择历史对话，确保是新的对话状态
 				if (this.messageList.length === 0) {
-					this.currentChatId = 'chat' + Date.now();
+					this.currentChatId = generateChatId();
 				}
 			}
 		},
@@ -241,7 +254,7 @@
 			resetToNewChat() {
 				this.messageList = [];
 				// 生成新的对话ID，避免重复
-				this.currentChatId = 'chat' + Date.now();
+				this.currentChatId = generateChatId();
 				this.inputMessage = '';
 				uni.showToast({
 					title: '已创建新对话',
@@ -250,164 +263,36 @@
 			},
 			
 			// 保存当前对话
-			saveCurrentChat() {
+			async saveCurrentChat() {
 				if (this.messageList.length === 0) return;
 				
-				// 获取对话标题（使用第一条用户消息）
-				const userMessages = this.messageList.filter(msg => msg.type === 'user');
-				let title = '新对话';
-				if (userMessages.length > 0) {
-					const firstUserMessage = userMessages[0];
-					title = firstUserMessage.content.length > 20 
-						? firstUserMessage.content.substring(0, 20) + '...' 
-						: firstUserMessage.content;
-				}
+				// 获取对话标题
+				const title = getChatTitle(this.messageList);
 				
 				// 确保有唯一的对话ID
-				const chatId = this.currentChatId || 'chat' + Date.now();
-				
-				let historyChats = uni.getStorageSync('historyChats') || [];
-				const existingChat = historyChats.find(chat => chat.id === chatId);
-				
-				// 检查是否有新消息
-				let hasNewMessages = false;
-				let lastTime = this.getCurrentDateTime();
-				
-				if (existingChat) {
-					// 如果对话已存在，检查消息数量是否增加
-					if (this.messageList.length > existingChat.messages.length) {
-						hasNewMessages = true;
-						lastTime = this.getCurrentDateTime(); // 有新消息时更新时间
-					} else {
-						// 没有新消息，保持原时间
-						lastTime = existingChat.lastTime;
-					}
-				} else {
-					// 新对话，使用当前时间
-					hasNewMessages = true;
-				}
+				const chatId = this.currentChatId || generateChatId();
 				
 				const newChat = {
 					id: chatId,
 					title: title,
-					lastTime: lastTime,
+					lastTime: getCurrentDateTime(),
 					messages: [...this.messageList]
 				};
 				
-				const existingIndex = historyChats.findIndex(chat => chat.id === chatId);
-				
-				if (existingIndex >= 0) {
-					// 更新现有对话
-					historyChats[existingIndex] = newChat;
-					
-					// 只有在有新消息时才重新排序
-					if (hasNewMessages) {
-						// 将更新的对话移到最前面
-						historyChats.splice(existingIndex, 1);
-						historyChats.unshift(newChat);
-					}
-				} else {
-					// 添加新对话到最前面
-					historyChats.unshift(newChat);
+				// 使用API保存对话到后端
+				try {
+					await saveChatToBackend(newChat);
+					console.log('对话已保存到后端:', newChat);
+				} catch (error) {
+					console.error('保存对话失败:', error);
+					uni.showToast({
+						title: '保存失败，请检查网络',
+						icon: 'none'
+					});
 				}
-				
-				uni.setStorageSync('historyChats', historyChats);
-				console.log('对话已保存:', newChat, '有新消息:', hasNewMessages);
 			},
 			
-			// 显示图片选择选项
-			showImageOptions() {
-				uni.showActionSheet({
-					itemList: ['拍照', '从相册选择'],
-					success: (res) => {
-						if (res.tapIndex === 0) {
-							this.takePhoto();
-						} else if (res.tapIndex === 1) {
-							this.chooseImage();
-						}
-					}
-				});
-			},
-			
-			// 拍照
-			takePhoto() {
-				uni.chooseImage({
-					count: 1,
-					sourceType: ['camera'],
-					success: (res) => {
-						this.handleImageSelected(res.tempFilePaths[0]);
-					},
-					fail: (err) => {
-						console.log('拍照失败:', err);
-						uni.showToast({
-							title: '拍照失败',
-							icon: 'none'
-						});
-					}
-				});
-			},
-			
-			// 从相册选择图片
-			chooseImage() {
-				uni.chooseImage({
-					count: 1,
-					sourceType: ['album'],
-					success: (res) => {
-						this.handleImageSelected(res.tempFilePaths[0]);
-					},
-					fail: (err) => {
-						console.log('选择图片失败:', err);
-						uni.showToast({
-							title: '选择图片失败',
-							icon: 'none'
-						});
-					}
-				});
-			},
-			
-			// 处理选中的图片
-			handleImageSelected(imagePath) {
-				// 添加用户图片消息
-				this.addMessage({
-					type: 'user',
-					content: '[图片]',
-					time: this.getCurrentTime(),
-					image: imagePath
-				});
-				
-				// 显示加载状态
-				this.isLoading = true;
-				
-				// 模拟AI识别回复
-				setTimeout(() => {
-					this.getImageAnalysis(imagePath);
-				}, 1500);
-			},
-			
-			// 获取图片分析结果
-			getImageAnalysis(imagePath) {
-				// 这里应该调用真实的AI图像识别API
-				// 目前使用模拟回复
-				const responses = [
-					'根据图片分析，这可能是某种害虫。建议您采取相应的防治措施。',
-					'图片中的害虫特征明显，建议使用专业杀虫剂进行处理。',
-					'这看起来像是常见的农业害虫，需要及时防治以避免扩散。'
-				];
-				
-				const randomResponse = responses[Math.floor(Math.random() * responses.length)];
-				
-				// 添加AI回复
-				this.addMessage({
-					type: 'ai',
-					content: randomResponse,
-					time: this.getCurrentTime()
-				});
-				
-				this.isLoading = false;
-				
-				// 保存对话到历史记录
-				this.saveCurrentChat();
-			},
+
 			
 			// 发送消息
 			sendMessage() {
@@ -415,11 +300,22 @@
 					return;
 				}
 				
+				// 如果有引用，将引用内容添加到消息中
+				let messageContent = this.inputMessage;
+				let hasQuote = false;
+				if (this.quotedMessage) {
+					messageContent = `引用：${this.quotedMessage.content}\n\n${this.inputMessage}`;
+					hasQuote = true;
+					// 清除引用
+					this.quotedMessage = null;
+				}
+				
 				// 添加用户消息
 				this.addMessage({
 					type: 'user',
-					content: this.inputMessage,
-					time: this.getCurrentTime()
+					content: messageContent,
+					time: this.getCurrentTime(),
+					hasQuote: hasQuote
 				});
 				
 				const userQuestion = this.inputMessage;
@@ -435,31 +331,38 @@
 			},
 			
 			// 获取AI回复
-			getAIResponse(question) {
-				// 这里应该调用真实的AI API
-				// 目前使用模拟回复
-				let response = '';
-				
-				if (question.includes('识别') || question.includes('害虫')) {
-					response = '我可以帮您识别各种害虫。请上传害虫图片，我会为您分析害虫类型并提供防治建议。';
-				} else if (question.includes('防治') || question.includes('处理')) {
-					response = '针对不同害虫，我们有不同的防治方法。建议您先上传害虫图片进行识别，然后我会为您提供具体的防治方案。';
-				} else if (question.includes('图片') || question.includes('上传')) {
-					response = '您可以通过点击输入框旁边的加号按钮来上传害虫图片。支持拍照和从相册选择图片。';
-				} else {
-					response = '我是专业的害虫识别助手，可以帮您识别害虫、提供防治建议。请告诉我您需要什么帮助，或者上传害虫图片进行识别。';
+			async getAIResponse(question) {
+				try {
+					const response = await sendAIMessage({
+						content: question,
+						type: 'user',
+						time: getCurrentTime()
+					});
+					
+					if (response.success) {
+						// 添加AI回复
+						this.addMessage({
+							type: 'ai',
+							content: response.data.content,
+							time: response.data.time
+						});
+					} else {
+						uni.showToast({
+							title: 'AI回复失败',
+							icon: 'none'
+						});
+					}
+				} catch (error) {
+					console.error('AI回复错误:', error);
+					uni.showToast({
+						title: '网络连接失败',
+						icon: 'none'
+					});
 				}
-				
-				// 添加AI回复
-				this.addMessage({
-					type: 'ai',
-					content: response,
-					time: this.getCurrentTime()
-				});
 				
 				this.isLoading = false;
 				
-				// 保存对话到历史记录（只有在有新消息时才更新）
+				// 保存对话到历史记录
 				this.saveCurrentChat();
 			},
 			
@@ -490,21 +393,12 @@
 			
 			// 获取当前时间
 			getCurrentTime() {
-				const now = new Date();
-				const hours = now.getHours().toString().padStart(2, '0');
-				const minutes = now.getMinutes().toString().padStart(2, '0');
-				return `${hours}:${minutes}`;
+				return getCurrentTime();
 			},
 			
 			// 获取当前日期时间
 			getCurrentDateTime() {
-				const now = new Date();
-				const year = now.getFullYear();
-				const month = (now.getMonth() + 1).toString().padStart(2, '0');
-				const day = now.getDate().toString().padStart(2, '0');
-				const hours = now.getHours().toString().padStart(2, '0');
-				const minutes = now.getMinutes().toString().padStart(2, '0');
-				return `${year}-${month}-${day} ${hours}:${minutes}`;
+				return getCurrentDateTime();
 			},
 			
 			// 搜索输入处理
@@ -570,6 +464,103 @@
 				this.$nextTick(() => {
 					this.scrollIntoView = `msg-${index}`;
 				});
+			},
+			
+			// 复制消息内容
+			async copyMessage(content) {
+				try {
+					await copyMessage(content);
+					uni.showToast({
+						title: '已复制到剪贴板',
+						icon: 'success'
+					});
+				} catch (error) {
+					uni.showToast({
+						title: '复制失败',
+						icon: 'none'
+					});
+				}
+			},
+			
+			// 引用消息
+			quoteMessage(message) {
+				this.quotedMessage = message;
+				uni.showToast({
+					title: '已引用消息',
+					icon: 'success'
+				});
+			},
+			
+			// 清除引用
+			clearQuote() {
+				this.quotedMessage = null;
+			},
+			
+			// 切换收藏状态
+			toggleStar(message, index) {
+				// 使用Vue.set确保响应式更新
+				this.$set(message, 'starred', !message.starred);
+				
+				uni.showToast({
+					title: message.starred ? '已收藏' : '已取消收藏',
+					icon: 'success'
+				});
+			},
+			
+
+			
+			// 反馈消息
+			async feedbackMessage(message) {
+				uni.showActionSheet({
+					itemList: ['有帮助', '无帮助', '内容错误', '其他问题'],
+					success: async (res) => {
+						const feedbackTypes = ['有帮助', '无帮助', '内容错误', '其他问题'];
+						const selectedType = feedbackTypes[res.tapIndex];
+						
+						try {
+							await submitFeedback({
+								type: selectedType,
+								message: message.content,
+								chatId: this.currentChatId
+							});
+							
+							uni.showToast({
+								title: `感谢您的反馈：${selectedType}`,
+								icon: 'success'
+							});
+						} catch (error) {
+							console.error('提交反馈失败:', error);
+							uni.showToast({
+								title: '反馈提交失败',
+								icon: 'none'
+							});
+						}
+					}
+				});
+			},
+			
+			// 获取引用内容
+			getQuoteContent(content) {
+				if (content.includes('引用：')) {
+					const parts = content.split('\n\n');
+					if (parts.length > 1) {
+						const quoteText = parts[0].replace('引用：', '');
+						// 只显示前30个字符，确保一行显示
+						return quoteText.length > 30 ? quoteText.substring(0, 30) + '...' : quoteText;
+					}
+				}
+				return '';
+			},
+			
+			// 获取主要内容
+			getMainContent(content) {
+				if (content.includes('引用：')) {
+					const parts = content.split('\n\n');
+					if (parts.length > 1) {
+						return parts.slice(1).join('\n\n');
+					}
+				}
+				return content;
 			}
 		}
 	}
@@ -580,95 +571,61 @@
 		height: 100vh;
 		display: flex;
 		flex-direction: column;
-		background-color: #f5f5f5;
+		background: #f5f5f5;
 		position: relative;
 		width: 100%;
 		box-sizing: border-box;
 	}
 	
-	.header {
-		background-color: #4CAF50;
-		padding: 20rpx 30rpx;
+	.search-container {
+		background: rgba(255, 255, 255, 0.9);
+		padding: 20rpx 40rpx;
+		border-bottom: 1rpx solid rgba(76, 175, 80, 0.1);
+		position: relative;
+		z-index: 1;
 		display: flex;
 		align-items: center;
-		justify-content: space-between;
-		box-shadow: 0 2rpx 10rpx rgba(0,0,0,0.1);
+		gap: 20rpx;
 	}
-	
-	.header-left, .header-right {
-		width: 80rpx;
-		display: flex;
-		justify-content: center;
-	}
-	
-	.header-center {
-		flex: 1;
-		text-align: center;
-	}
-	
-	.header-btn {
-		width: 60rpx;
-		height: 60rpx;
-		background: rgba(255,255,255,0.2);
+		.history-btn {
+		width: 70rpx;
+		height: 70rpx;
+		background: transparent;
 		border: none;
-		border-radius: 50%;
 		display: flex;
 		align-items: center;
 		justify-content: center;
 		cursor: pointer;
 		transition: all 0.3s ease;
 	}
+
 	
-	.header-btn:active {
-		background: rgba(255,255,255,0.3);
+	.history-btn:active {
+		opacity: 0.7;
 		transform: scale(0.95);
 	}
 	
-	.header-icon {
-		color: white;
-		font-size: 28rpx;
-	}
-	
-	.hamburger-icon {
-		display: flex;
-		flex-direction: column;
-		justify-content: center;
-		align-items: center;
-		gap: 4rpx;
-	}
-	
-	.line {
-		width: 24rpx;
-		height: 3rpx;
-		background-color: #333;
-		border-radius: 2rpx;
-	}
-	
-	.title {
-		color: white;
-		font-size: 36rpx;
-		font-weight: bold;
-	}
-	
-	.search-container {
-		background-color: white;
-		padding: 20rpx 30rpx;
-		border-bottom: 1rpx solid #e0e0e0;
+	.history-icon {
+		width: 50rpx;
+		height: 50rpx;
+		filter: brightness(0) saturate(0) invert(0.3);
 	}
 	
 	.search-box {
 		display: flex;
 		align-items: center;
-		background-color: #f5f5f5;
+		background: rgba(255, 255, 255, 0.8);
 		border-radius: 25rpx;
-		padding: 15rpx 20rpx;
+		padding: 20rpx 25rpx;
+		border: 1rpx solid rgba(76, 175, 80, 0.2);
 		position: relative;
+		flex: 1;
 	}
 	
 	.search-icon {
-		font-size: 28rpx;
-		margin-right: 15rpx;
-		color: #999;
+		width: 35rpx;
+		height: 35rpx;
+		margin-right: 20rpx;
 	}
 	
 	.search-input {
@@ -677,12 +634,17 @@
 		background: transparent;
 		border: none;
 		outline: none;
+		color: #000000;
+	}
+	
+	.search-input::placeholder {
+		color: #66BB6A;
 	}
 	
 	.clear-btn {
 		width: 40rpx;
 		height: 40rpx;
-		background-color: #ccc;
+		background-color: #66BB6A;
 		border-radius: 50%;
 		display: flex;
 		align-items: center;
@@ -698,10 +660,12 @@
 	
 	.chat-list {
 		flex: 1;
-		padding: 20rpx;
+		padding: 30rpx 20rpx;
 		overflow-y: auto;
 		width: 100%;
 		box-sizing: border-box;
+		position: relative;
+		z-index: 1;
 	}
 	
 	.welcome-container {
@@ -714,24 +678,25 @@
 	
 	.welcome-content {
 		text-align: center;
-		background: white;
+		background: rgba(255, 255, 255, 0.95);
 		border-radius: 20rpx;
 		padding: 60rpx 40rpx;
-		box-shadow: 0 4rpx 20rpx rgba(0,0,0,0.1);
+		box-shadow: 0 4rpx 20rpx rgba(76, 175, 80, 0.15);
 		max-width: 600rpx;
+		border: 1rpx solid rgba(76, 175, 80, 0.1);
 	}
 	
 	.welcome-title {
 		font-size: 36rpx;
 		font-weight: bold;
-		color: #333;
+		color: #2E7D32;
 		margin-bottom: 20rpx;
 		display: block;
 	}
 	
 	.welcome-subtitle {
 		font-size: 28rpx;
-		color: #666;
+		color: #4CAF50;
 		margin-bottom: 40rpx;
 		display: block;
 	}
@@ -747,13 +712,14 @@
 		align-items: center;
 		justify-content: center;
 		padding: 20rpx;
-		background: #f8f8f8;
+		background: rgba(76, 175, 80, 0.1);
 		border-radius: 15rpx;
+		border: 1rpx solid rgba(76, 175, 80, 0.2);
 	}
 	
 	.feature-text {
 		font-size: 28rpx;
-		color: #333;
+		color: #2E7D32;
 	}
 	
 	.message-item {
@@ -770,11 +736,12 @@
 	}
 	
 	.avatar {
-		width: 80rpx;
-		height: 80rpx;
+		width: 60rpx;
+		height: 60rpx;
 		border-radius: 50%;
 		overflow: hidden;
-		margin: 0 20rpx;
+		margin: 0 10rpx;
+		border: 2rpx solid rgba(76, 175, 80, 0.2);
 	}
 	
 	.avatar-img {
@@ -783,8 +750,8 @@
 	}
 	
 	.message-bubble {
-		max-width: 70%;
-		padding: 20rpx 30rpx;
+		max-width: 75%;
+		padding: 25rpx 30rpx;
 		border-radius: 20rpx;
 		position: relative;
 		word-wrap: break-word;
@@ -792,21 +759,31 @@
 	}
 	
 	.user-message .message-bubble {
-		background-color: #4CAF50;
-		color: white;
+		background: linear-gradient(135deg, #cdecce 0%, #cdecce 0%);
+		color: #333;
 		border-bottom-right-radius: 5rpx;
+		box-shadow: 0 4rpx 15rpx rgba(131, 212, 134, 0.2);
+	}
+	
+	.user-message .quote-content {
+		font-size: 28rpx;
+		color: rgba(0, 0, 0, 0.7);
+		line-height: 1.3;
+		word-wrap: break-word;
+		margin-bottom: 8rpx;
 	}
 	
 	.ai-message .message-bubble {
-		background-color: white;
-		color: #333;
+		background: rgba(255, 255, 255, 0.95);
+		color: rgba(0, 0, 0, 0.7);
 		border-bottom-left-radius: 5rpx;
-		box-shadow: 0 2rpx 10rpx rgba(0,0,0,0.1);
+		box-shadow: 0 4rpx 15rpx rgba(76, 175, 80, 0.15);
+		border: 1rpx solid rgba(76, 175, 80, 0.1);
 	}
 	
 	.message-text {
-		font-size: 28rpx;
-		line-height: 1.5;
+		font-size: 32rpx;
+		line-height: 1.6;
 		word-wrap: break-word;
 	}
 	
@@ -818,7 +795,7 @@
 	}
 	
 	.message-time {
-		font-size: 24rpx;
+		font-size: 26rpx;
 		opacity: 0.7;
 		margin-top: 10rpx;
 		display: block;
@@ -838,7 +815,7 @@
 		width: 8rpx;
 		height: 8rpx;
 		border-radius: 50%;
-		background-color: #999;
+		background-color: #4CAF50;
 		margin: 0 4rpx;
 		animation: typing 1.4s infinite ease-in-out;
 	}
@@ -862,10 +839,64 @@
 		}
 	}
 	
+	.quote-container {
+		background: rgba(255, 255, 255, 0.95);
+		padding: 20rpx 40rpx;
+		border-top: 1rpx solid rgba(76, 175, 80, 0.1);
+		position: relative;
+		z-index: 1;
+	}
+	
+	.quote-content {
+		display: flex;
+		align-items: flex-start;
+		background: rgba(76, 175, 80, 0.1);
+		border-radius: 15rpx;
+		padding: 20rpx;
+		border: 1rpx solid rgba(76, 175, 80, 0.2);
+		position: relative;
+	}
+	
+	.quote-label {
+		font-size: 24rpx;
+		color: rgba(0, 0, 0, 0.7);
+		font-weight: bold;
+		margin-right: 15rpx;
+		flex-shrink: 0;
+	}
+	
+	.quote-text {
+		font-size: 26rpx;
+		color: rgba(0, 0, 0, 0.7);
+		line-height: 1.4;
+		flex: 1;
+		word-wrap: break-word;
+	}
+	
+	.quote-close {
+		width: 40rpx;
+		height: 40rpx;
+		background: rgba(76, 175, 80, 0.2);
+		border-radius: 50%;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		margin-left: 15rpx;
+		flex-shrink: 0;
+	}
+	
+	.close-icon {
+		color: #4CAF50;
+		font-size: 24rpx;
+		font-weight: bold;
+	}
+	
 	.input-area {
-		background-color: white;
-		padding: 20rpx 30rpx;
-		border-top: 1rpx solid #e0e0e0;
+		background: rgba(255, 255, 255, 0.95);
+		padding: 30rpx 40rpx;
+		border-top: 1rpx solid rgba(76, 175, 80, 0.1);
+		position: relative;
+		z-index: 1;
 	}
 	
 	.input-container {
@@ -873,53 +904,81 @@
 		align-items: center;
 	}
 	
-	.plus-btn {
-		width: 80rpx;
-		height: 80rpx;
-		border-radius: 50%;
-		background-color: white;
-		border: 2rpx solid #4CAF50;
+	.new-chat-btn {
+		width: 70rpx;
+		height: 70rpx;
+		background: linear-gradient(135deg, #4CAF50 0%, #66BB6A 100%);
+		border: none;
+		outline: none;
 		display: flex;
 		align-items: center;
 		justify-content: center;
-		margin-right: 20rpx;
+		padding: 0;
+		border-radius: 30rpx;
+		box-shadow: 0 4rpx 15rpx rgba(76, 175, 80, 0.3);
+		transition: all 0.3s ease;
 	}
 	
-	.plus-btn[disabled] {
-		background-color: #ccc;
+	.new-chat-btn:active {
+		transform: scale(0.95);
+		opacity: 0.8;
 	}
 	
-	.plus-icon {
-		color: #4CAF50;
-		font-size: 40rpx;
-		font-weight: bold;
+	.new-chat-btn[disabled] {
+		opacity: 0.5;
+		background: #ccc;
+		box-shadow: none;
+	}
+	
+	.new-chat-btn:focus {
+		outline: none;
+		border: none;
+	}
+	
+	.new-chat-icon {
+		width: 50rpx;
+		height: 50rpx;
+		filter: brightness(0) invert(1);
 	}
 	
 	.message-input {
 		flex: 1;
 		height: 80rpx;
-		padding: 0 20rpx;
-		border: 1rpx solid #e0e0e0;
+		padding: 0 25rpx;
+		border: 1rpx solid rgba(76, 175, 80, 0.2);
 		border-radius: 40rpx;
 		font-size: 28rpx;
-		background-color: #f9f9f9;
+		background: rgba(255, 255, 255, 0.8);
+		color: #000000;
+	}
+	
+	.message-input::placeholder {
+		color: #66BB6A;
 	}
 	
 	.send-btn {
 		margin-left: 20rpx;
-		height: 80rpx;
-		line-height: 80rpx;
-		padding: 0 40rpx;
-		background-color: #4CAF50;
-		color: white;
+		height: 70rpx;
+		width: 70rpx;
+		padding: 0;
+		background: linear-gradient(135deg, #4CAF50 0%, #66BB6A 100%);
 		border-radius: 40rpx;
-		font-size: 28rpx;
 		border: none;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		box-shadow: 0 4rpx 15rpx rgba(76, 175, 80, 0.3);
 	}
 	
 	.send-btn[disabled] {
-		background-color: #ccc;
-		color: #999;
+		background: #ccc;
+		box-shadow: none;
+	}
+	
+	.send-icon {
+		width: 50rpx;
+		height: 50rpx;
+		filter: brightness(0) invert(1);
 	}
 	
 	.highlighted-message {
@@ -931,6 +990,47 @@
 	
 	.highlighted-message .message-bubble {
 		background-color: rgba(255, 215, 0, 0.1);
+	}
+	
+	.message-actions {
+		display: flex;
+		align-items: center;
+		margin-top: 15rpx;
+		padding-top: 15rpx;
+		border-top: 1rpx solid rgba(76, 175, 80, 0.1);
+	}
+	
+	.action-btn {
+		width: 50rpx;
+		height: 50rpx;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		margin-right: 20rpx;
+		transition: all 0.3s ease;
+	}
+	
+	.action-btn:active {
+		transform: scale(0.9);
+		opacity: 0.7;
+	}
+	
+	.action-icon {
+		width: 40rpx;
+		height: 40rpx;
+		filter: brightness(0) saturate(0) invert(0.3);
+	}
+	
+	.quote-content {
+		font-size: 28rpx;
+		line-height: 1.3;
+		word-wrap: break-word;
+	}
+	
+	.quote-divider {
+		height: 1rpx;
+		background: rgba(0, 0, 0, 0.2);
+		margin: 8rpx 0;
 	}
 </style>
 
