@@ -1,6 +1,0 @@
-{
-  "navigationBarTitleText": "农业病虫害检测",
-  "usingComponents": {
-    "login": "../../components/login/login"
-  }
-}
