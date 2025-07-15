@@ -62,7 +62,7 @@ export default {
         })
         // 发送到后端
         const res = await uni.request({
-          url: 'http://192.168.241.56:5000/api/auth/login',
+          url: 'http://121.41.69.216:5000/api/auth/login',
           method: 'POST',
           data: {
             code: loginRes.code,

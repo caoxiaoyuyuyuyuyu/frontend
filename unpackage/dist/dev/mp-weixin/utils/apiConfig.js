@@ -2,7 +2,7 @@
 const common_vendor = require("../common/vendor.js");
 const API_CONFIG = {
   // 基础URL
-  BASE_URL: "http://localhost:5000",
+  BASE_URL: "http://121.41.69.216:5000",
   // API版本
   API_VERSION: "api",
   // 请求超时时间（毫秒）

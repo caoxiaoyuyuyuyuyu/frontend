@@ -45,7 +45,7 @@ const _sfc_main = {
           provider: "weixin"
         });
         const res = await common_vendor.index.request({
-          url: "http://192.168.241.56:5000/api/auth/login",
+          url: "http://121.41.69.216:5000/api/auth/login",
           method: "POST",
           data: {
             code: loginRes.code,
