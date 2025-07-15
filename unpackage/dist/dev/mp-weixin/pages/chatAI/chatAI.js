@@ -7,7 +7,7 @@ const _sfc_main = {
     return {
       messageList: [],
       // 消息列表
-      inputMessage: "",
+      message: "",
       // 输入框内容
       isLoading: false,
       // 是否正在加载
@@ -19,52 +19,64 @@ const _sfc_main = {
       // 用户头像
       aiAvatar: "/static/logo.png",
       // AI头像
-      currentChatId: null,
+      conversation_id: null,
       // 当前对话ID
-      historyChats: [],
-      // 历史对话列表
+      new_conversation: true,
       searchKeyword: "",
       // 搜索关键词
-      searchResults: [],
+      searchResults: []
       // 搜索结果
-      quotedMessage: null
-      // 引用的消息
     };
-  },
-  onLoad() {
-    this.messageList = [];
-    this.currentChatId = pages_chatAI_api.generateChatId();
-    this.inputMessage = "";
   },
   onShow() {
     const selectedChat = pages_chatAI_api.getSelectedChat();
     if (selectedChat) {
-      common_vendor.index.__f__("log", "at pages/chatAI/chatAI.vue:177", "检测到历史对话数据:", selectedChat);
+      this.conversation_id = selectedChat;
+      this.new_conversation = false;
       this.loadChat(selectedChat);
     } else {
-      if (this.messageList.length === 0) {
-        this.currentChatId = pages_chatAI_api.generateChatId();
-      }
-    }
-  },
-  onHide() {
-    if (this.messageList.length > 0) {
-      this.saveCurrentChat();
+      this.initNewChat();
     }
   },
   methods: {
-    // 显示历史侧边栏
-    showHistorySidebar() {
-      common_vendor.index.__f__("log", "at pages/chatAI/chatAI.vue:196", "showHistorySidebar 被调用");
-      common_vendor.index.navigateTo({
-        url: "/pages/chatAI/history"
+    // 渲染Markdown内容
+    renderMarkdown(content) {
+      if (!content)
+        return "";
+      const md = common_vendor.MarkdownIt({
+        html: false,
+        // 不解析HTML标签
+        linkify: true,
+        // 自动将URL转换为链接
+        breaks: true,
+        // 将换行符转换为<br>
+        typographer: true
+        // 启用一些排版替换
       });
+      return md.render(content);
+    },
+    // 初始化新对话
+    initNewChat() {
+      this.messageList = [];
+      this.conversation_id = null;
+      this.new_conversation = true;
+      this.message = "";
+      common_vendor.index.removeStorageSync("selectedChat");
+    },
+    // 格式化时间显示
+    formatTime(timestamp) {
+      if (!timestamp)
+        return "";
+      const date = new Date(timestamp);
+      return `${date.getHours().toString().padStart(2, "0")}:${date.getMinutes().toString().padStart(2, "0")}`;
     },
     // 加载指定对话
-    loadChat(chat) {
-      common_vendor.index.__f__("log", "at pages/chatAI/chatAI.vue:205", "加载历史对话:", chat);
-      this.currentChatId = chat.id;
-      this.messageList = [...chat.messages];
+    async loadChat(conversation_id) {
+      this.conversation_id = conversation_id;
+      const response = await pages_chatAI_api.getChatDetail(this.conversation_id);
+      if (response) {
+        this.messageList = response.conversation || [];
+      }
       this.$nextTick(() => {
         setTimeout(() => {
           this.scrollToBottom();
@@ -76,57 +88,24 @@ const _sfc_main = {
         duration: 1500
       });
     },
-    // 显示历史对话列表
-    showHistory() {
-      common_vendor.index.showToast({
-        title: "历史对话功能开发中",
-        icon: "none"
-      });
-    },
     // 创建新对话
     createNewChat() {
-      if (this.messageList.length > 0) {
-        common_vendor.index.showModal({
-          title: "创建新对话",
-          content: "确定要开始新的对话吗？当前对话将被保存。",
-          success: (res) => {
-            if (res.confirm) {
-              this.saveCurrentChat();
-              this.resetToNewChat();
-            }
-          }
-        });
-      } else {
-        this.resetToNewChat();
-      }
-    },
-    // 重置为新对话
-    resetToNewChat() {
-      this.messageList = [];
-      this.currentChatId = pages_chatAI_api.generateChatId();
-      this.inputMessage = "";
-      common_vendor.index.showToast({
-        title: "已创建新对话",
-        icon: "success"
-      });
+      this.initNewChat();
     },
     // 保存当前对话
     async saveCurrentChat() {
       if (this.messageList.length === 0)
         return;
-      const title = pages_chatAI_api.getChatTitle(this.messageList);
-      const chatId = this.currentChatId || pages_chatAI_api.generateChatId();
-      const newChat = {
-        id: chatId,
-        title,
-        lastTime: pages_chatAI_api.getCurrentDateTime(),
-        messages: [...this.messageList]
+      const chatData = {
+        id: this.currentChatId,
+        messages: this.messageList,
+        lastTime: (/* @__PURE__ */ new Date()).toISOString()
       };
       try {
-        await pages_chatAI_api.saveChatToBackend(newChat);
-        common_vendor.index.__f__("log", "at pages/chatAI/chatAI.vue:285", "对话已保存到后端:", newChat);
+        await pages_chatAI_api.saveChatToBackend(chatData);
+        common_vendor.index.__f__("log", "at pages/chatAI/chatAI.vue:229", "对话已保存:", chatData);
       } catch (error) {
-        common_vendor.index.__f__("error", "at pages/chatAI/chatAI.vue:287", "保存对话失败:", error);
+        common_vendor.index.__f__("error", "at pages/chatAI/chatAI.vue:231", "保存对话失败:", error);
         common_vendor.index.showToast({
           title: "保存失败，请检查网络",
           icon: "none"
@@ -134,46 +113,29 @@ const _sfc_main = {
       }
     },
     // 发送消息
-    sendMessage() {
-      if (!this.inputMessage.trim() || this.isLoading) {
+    async sendMessage() {
+      if (!this.message.trim() || this.isLoading)
         return;
-      }
-      let messageContent = this.inputMessage;
-      let hasQuote = false;
-      if (this.quotedMessage) {
-        messageContent = `引用：${this.quotedMessage.content}
-
-${this.inputMessage}`;
-        hasQuote = true;
-        this.quotedMessage = null;
-      }
-      this.addMessage({
-        type: "user",
-        content: messageContent,
-        time: this.getCurrentTime(),
-        hasQuote
-      });
-      const userQuestion = this.inputMessage;
-      this.inputMessage = "";
+      const userMessage = {
+        role: "user",
+        content: this.message,
+        timestamp: (/* @__PURE__ */ new Date()).toISOString()
+      };
+      this.addMessage(userMessage);
+      const question = this.message;
+      this.message = "";
       this.isLoading = true;
-      setTimeout(() => {
-        this.getAIResponse(userQuestion);
-      }, 1e3);
-    },
-    // 获取AI回复
-    async getAIResponse(question) {
       try {
         const response = await pages_chatAI_api.sendAIMessage({
-          content: question,
-          type: "user",
-          time: pages_chatAI_api.getCurrentTime()
+          message: question,
+          new_conversation: this.new_conversation,
+          conversation_id: this.conversation_id
         });
-        if (response.success) {
-          this.addMessage({
-            type: "ai",
-            content: response.data.content,
-            time: response.data.time
-          });
+        if (response) {
+          this.messageList = response.history || [];
+          this.conversation_id = response.conversation_id;
+          this.new_conversation = false;
+          pages_chatAI_api.setSelectedChat(this.conversation_id);
         } else {
           common_vendor.index.showToast({
             title: "AI回复失败",
@@ -181,14 +143,13 @@ ${this.inputMessage}`;
           });
         }
       } catch (error) {
-        common_vendor.index.__f__("error", "at pages/chatAI/chatAI.vue:356", "AI回复错误:", error);
+        common_vendor.index.__f__("error", "at pages/chatAI/chatAI.vue:276", "AI回复错误:", error);
         common_vendor.index.showToast({
           title: "网络连接失败",
           icon: "none"
         });
       }
       this.isLoading = false;
-      this.saveCurrentChat();
     },
     // 添加消息到列表
     addMessage(message) {
@@ -201,24 +162,20 @@ ${this.inputMessage}`;
     },
     // 滚动到底部
     scrollToBottom() {
-      this.$nextTick(() => {
-        if (this.messageList.length > 0) {
-          const lastIndex = this.messageList.length - 1;
-          this.scrollIntoView = `msg-${lastIndex}`;
-        } else {
-          this.scrollTop = 0;
-        }
+      if (this.messageList.length > 0) {
+        const lastIndex = this.messageList.length - 1;
+        this.scrollIntoView = `msg-${lastIndex}`;
+      } else {
+        this.scrollTop = 0;
+      }
+    },
+    // 显示历史侧边栏
+    showHistorySidebar() {
+      common_vendor.index.navigateTo({
+        url: "/pages/chatAI/history"
       });
     },
-    // 获取当前时间
-    getCurrentTime() {
-      return pages_chatAI_api.getCurrentTime();
-    },
-    // 获取当前日期时间
-    getCurrentDateTime() {
-      return pages_chatAI_api.getCurrentDateTime();
-    },
-    // 搜索输入处理
+    // 搜索相关方法
     onSearchInput() {
       if (this.searchKeyword.trim()) {
         this.performSearch();
@@ -226,7 +183,6 @@ ${this.inputMessage}`;
         this.clearSearch();
       }
     },
-    // 执行搜索
     performSearch() {
       if (!this.searchKeyword.trim()) {
         this.clearSearch();
@@ -252,7 +208,6 @@ ${this.inputMessage}`;
         });
       }
     },
-    // 清除搜索
     clearSearch() {
       this.searchKeyword = "";
       this.searchResults = [];
@@ -263,10 +218,6 @@ ${this.inputMessage}`;
         return false;
       const index = this.messageList.indexOf(message);
       return this.searchResults.includes(index);
-    },
-    // 高亮搜索文本（已移除，改用CSS样式实现）
-    highlightSearchText(text) {
-      return text;
     },
     // 滚动到指定消息
     scrollToMessage(index) {
@@ -291,15 +242,13 @@ ${this.inputMessage}`;
     },
     // 引用消息
     quoteMessage(message) {
-      this.quotedMessage = message;
+      this.inputMessage = `引用：${message.content}
+
+`;
       common_vendor.index.showToast({
         title: "已引用消息",
         icon: "success"
       });
-    },
-    // 清除引用
-    clearQuote() {
-      this.quotedMessage = null;
     },
     // 切换收藏状态
     toggleStar(message, index) {
@@ -327,7 +276,7 @@ ${this.inputMessage}`;
               icon: "success"
             });
           } catch (error) {
-            common_vendor.index.__f__("error", "at pages/chatAI/chatAI.vue:532", "提交反馈失败:", error);
+            common_vendor.index.__f__("error", "at pages/chatAI/chatAI.vue:425", "提交反馈失败:", error);
             common_vendor.index.showToast({
               title: "反馈提交失败",
               icon: "none"
@@ -335,27 +284,6 @@ ${this.inputMessage}`;
           }
         }
       });
-    },
-    // 获取引用内容
-    getQuoteContent(content) {
-      if (content.includes("引用：")) {
-        const parts = content.split("\n\n");
-        if (parts.length > 1) {
-          const quoteText = parts[0].replace("引用：", "");
-          return quoteText.length > 30 ? quoteText.substring(0, 30) + "..." : quoteText;
-        }
-      }
-      return "";
-    },
-    // 获取主要内容
-    getMainContent(content) {
-      if (content.includes("引用：")) {
-        const parts = content.split("\n\n");
-        if (parts.length > 1) {
-          return parts.slice(1).join("\n\n");
-        }
-      }
-      return content;
     }
   }
 };
@@ -378,37 +306,18 @@ function _sfc_render(_ctx, _cache, $props, $setup, $data, $options) {
   }, $data.messageList.length === 0 ? {} : {}, {
     m: common_vendor.f($data.messageList, (message, index, i0) => {
       return common_vendor.e({
-        a: message.type === "user" ? $data.userAvatar : $data.aiAvatar,
-        b: message.hasQuote
-      }, message.hasQuote ? {
-        c: common_vendor.t($options.getQuoteContent(message.content))
+        a: message.role === "user" ? $data.userAvatar : $data.aiAvatar,
+        b: $options.renderMarkdown(message.content),
+        c: common_vendor.t($options.formatTime(message.timestamp)),
+        d: message.role === "assistant"
+      }, message.role === "assistant" ? {
+        e: common_assets._imports_3,
+        f: common_vendor.o(($event) => $options.copyMessage(message.content), index)
       } : {}, {
-        d: message.hasQuote
-      }, message.hasQuote ? {} : {}, {
-        e: !message.image
-      }, !message.image ? {
-        f: common_vendor.t($options.getMainContent(message.content))
-      } : {}, {
-        g: message.image
-      }, message.image ? {
-        h: message.image
-      } : {}, {
-        i: common_vendor.t(message.time),
-        j: message.type === "ai"
-      }, message.type === "ai" ? {
-        k: common_assets._imports_3,
-        l: common_vendor.o(($event) => $options.copyMessage(message.content), index),
-        m: common_assets._imports_4,
-        n: common_vendor.o(($event) => $options.quoteMessage(message), index),
-        o: message.starred ? "/static/stars.png" : "/static/star.png",
-        p: common_vendor.o(($event) => $options.toggleStar(message, index), index),
-        q: common_assets._imports_5,
-        r: common_vendor.o(($event) => $options.feedbackMessage(message), index)
-      } : {}, {
-        s: index,
-        t: common_vendor.n(message.type === "user" ? "user-message" : "ai-message"),
-        v: common_vendor.n($options.isMessageHighlighted(message) ? "highlighted-message" : ""),
-        w: "msg-" + index
+        g: index,
+        h: common_vendor.n(message.role === "user" ? "user-message" : "ai-message"),
+        i: common_vendor.n($options.isMessageHighlighted(message) ? "highlighted-message" : ""),
+        j: "msg-" + index
       });
     }),
     n: $data.isLoading
@@ -417,18 +326,13 @@ function _sfc_render(_ctx, _cache, $props, $setup, $data, $options) {
   } : {}, {
     p: $data.scrollTop,
     q: $data.scrollIntoView,
-    r: $data.quotedMessage
-  }, $data.quotedMessage ? {
-    s: common_vendor.t($data.quotedMessage.content),
-    t: common_vendor.o((...args) => $options.clearQuote && $options.clearQuote(...args))
-  } : {}, {
-    v: $data.isLoading,
-    w: common_vendor.o((...args) => $options.sendMessage && $options.sendMessage(...args)),
-    x: $data.inputMessage,
-    y: common_vendor.o(($event) => $data.inputMessage = $event.detail.value),
-    z: common_assets._imports_6,
-    A: !$data.inputMessage.trim() || $data.isLoading,
-    B: common_vendor.o((...args) => $options.sendMessage && $options.sendMessage(...args))
+    r: $data.isLoading,
+    s: common_vendor.o((...args) => $options.sendMessage && $options.sendMessage(...args)),
+    t: $data.message,
+    v: common_vendor.o(($event) => $data.message = $event.detail.value),
+    w: common_assets._imports_4,
+    x: !$data.message.trim() || $data.isLoading,
+    y: common_vendor.o((...args) => $options.sendMessage && $options.sendMessage(...args))
   });
 }
 const MiniProgramPage = /* @__PURE__ */ common_vendor._export_sfc(_sfc_main, [["render", _sfc_render], ["__scopeId", "data-v-a298e7ff"]]);

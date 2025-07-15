@@ -72,9 +72,10 @@
   display: flex;
   gap: 12rpx;
   margin-top: 8rpx;
+  flex-direction: row;
 }
 .record-actions button.data-v-bd838ad3 {
-  font-size: 22rpx;
+  font-size: 16rpx;
   padding: 4rpx 16rpx;
   border-radius: 8rpx;
   background: #e5d3b6;

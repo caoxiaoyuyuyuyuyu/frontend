@@ -59,29 +59,18 @@ const _sfc_main = {
         this.visiblePages = this.generateVisiblePages();
       } catch (error) {
         common_vendor.index.__f__("error", "at pages/pestGallery/pestGallery.vue:156", "加载害虫列表失败:", error);
-        this.pestList = [
-          { id: 4, name: "二星蝽", host_range: "麦类、水稻、棉花、大豆、胡麻、高粱、玉米、甘薯、茄子、桑、无花果等", image: "exc_Adult.png" },
-          { id: 5, name: "云斑天牛", host_range: "核桃、苹果、梨等果树及杨、柳、桑、栎、白蜡、乌桕、女贞、泡桐、枇杷、苦楝、悬铃木、柑橘、紫薇等树木", image: "ybtn_Adult.png" },
-          { id: 6, name: "光肩星天牛", host_range: "杨属、柳属、榆属、法桐、复叶槭、苹果、梨、李、樱桃、樱花、枫香、糖槭、苦楝、桑树等", image: "gjxtn_Adult.png" },
-          { id: 7, name: "八点广翅蜡蝉", host_range: "苹果、梨、桃、杏、李、梅、樱桃、枣、栗、山楂、柑橘等果树", image: "bdgclc_Adult.png" },
-          { id: 8, name: "棉古毒蛾", host_range: "芒果、荔枝、洋紫荆等40余种植物", image: "sxdde_Adult.png" },
-          { id: 9, name: "松墨天牛", host_range: "马尾松、雪松、云杉、柳杉、五针松、赤松等松科植物", image: "mtn_Adult.png" },
-          { id: 10, name: "小绿叶蝉", host_range: "葡萄、苹果等果树；棉花、小麦等农作物；十字花科蔬菜等共20+种寄主", image: "xlyc_Adult.png" },
-          { id: 11, name: "扁刺蛾", host_range: "枣、苹果、梨、桃、梧桐、枫杨、白杨、泡桐、柿子等50+种果树/林木", image: "bce_larva.png" },
-          { id: 12, name: "扇舟蛾属", host_range: "杨属、柳属树种为主", image: "sze_Adult.png" },
-          { id: 13, name: "斑衣蜡蝉", host_range: "臭椿（最喜）、杨树、刺槐、葡萄、猕猴桃等30+种林木/果树", image: "bylc_Adult.png" }
-        ];
+        this.pestList = [];
         this.hasNextPage = false;
         this.totalPages = 1;
-        this.totalItems = 13;
+        this.totalItems = 0;
         this.visiblePages = this.generateVisiblePages();
       } finally {
         this.loading = false;
       }
     },
-    showPestDetail(pest) {
+    showPestDetail(id) {
       common_vendor.index.navigateTo({
-        url: `/pages/pestDetail/pestDetail?pest=${encodeURIComponent(JSON.stringify(pest))}`
+        url: `/pages/pestDetail/pestDetail?pestId=${id}`
       });
     },
     switchTip(index) {
@@ -160,7 +149,7 @@ function _sfc_render(_ctx, _cache, $props, $setup, $data, $options) {
         b: common_vendor.t(pest.name),
         c: common_vendor.t(pest.host_range),
         d: pest.id,
-        e: common_vendor.o(($event) => $options.showPestDetail(pest), pest.id)
+        e: common_vendor.o(($event) => $options.showPestDetail(pest.id), pest.id)
       };
     })
   }, {

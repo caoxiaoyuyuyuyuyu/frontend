@@ -1,7 +1,7 @@
 <template>
   <view class="record-container">
     <!-- 搜索和筛选 -->
-    <view class="search-filter">
+   <!-- <view class="search-filter">
       <input class="search-input" v-model="searchText" placeholder="搜索害虫名称" @input="filterRecords" />
       <picker :range="timeOptions" :value="timeFilter" @change="onTimeChange">
         <view class="filter-btn">{{ timeOptions[timeFilter] }}</view>
@@ -9,7 +9,7 @@
       <picker :range="confidenceOptions" :value="confidenceFilter" @change="onConfidenceChange">
         <view class="filter-btn">{{ confidenceOptions[confidenceFilter] }}</view>
       </picker>
-    </view>
+    </view> -->
 
     <!-- 数据统计 -->
     <view class="stat-section">
@@ -19,131 +19,166 @@
     <!-- 识别记录列表 -->
     <view v-if="filteredRecords.length === 0" class="empty-tip">暂无识别记录</view>
     <view v-for="item in filteredRecords" :key="item.id" class="record-row">
-      <image :src="item.image" class="record-img" />
+      <image :src="getImageUrl(item.image_url)" class="record-img"
+        @click="previewImage(item.image_url)"  />
       <view class="record-info">
-        <view class="record-title">{{ item.name }}</view>
+        <view class="record-title">{{ item.pest_name }}</view>
         <view class="record-meta">
-          <text>{{ item.time }}</text>
-          <text class="confidence">{{ item.confidence }}匹配</text>
+          <text>{{ formatDate(item.detection_time) }}</text>
         </view>
-        <view class="record-actions">
-          <button @click="viewDetail(item)">详情</button>
-          <button @click="deleteRecord(item)">删除</button>
+        <view class="record-meta">
+          <text class="confidence">{{ formatConfidence(item.confidence) }}匹配</text>
         </view>
       </view>
+	<view class="record-actions">
+	  <button @click="viewDetail(item)">详情</button>
+	  <!-- <button @click="deleteRecord(item)">删除</button> -->
+	</view>
     </view>
   </view>
 </template>
 
-<script>
-export default {
-  data() {
-    return {
-      records: [
-        // 示例数据，实际应从后端获取
-        {
-          id: 1,
-          image: '/static/pest1.jpg',
-          name: '棉铃虫',
-          time: '2024/07/15 14:30:00',
-          confidence: '92%',
-          type: '蛾类'
-        },
-        // ...
-      ],
-      searchText: '',
-      timeOptions: ['全部', '最近一周', '最近一个月'],
-      timeFilter: 0,
-      confidenceOptions: ['默认排序', '高可信度优先', '低可信度优先'],
-      confidenceFilter: 0,
-      filteredRecords: [],
-      stat: {
-        count: 0,
-        topType: ''
+<script setup>
+import { ref, computed, onMounted } from 'vue'
+import { getRecords, getImageUrl } from './api.js'
+import { formatDate } from '../../utils/common.js'
+
+// 响应式数据
+const records = ref([])
+const searchText = ref('')
+const timeOptions = ref(['全部', '最近一周', '最近一个月'])
+const timeFilter = ref(0)
+const confidenceOptions = ref(['默认排序', '高可信度优先', '低可信度优先'])
+const confidenceFilter = ref(0)
+const filteredRecords = ref([])
+const stat = ref({
+  count: 0,
+  topType: ''
+})
+
+// 新增图片预览方法
+const previewImage = (imageUrl) => {
+  const fullUrl = getImageUrl(imageUrl)
+  uni.previewImage({
+    urls: [fullUrl], // 支持多张图片预览，这里我们只传当前图片
+    current: fullUrl // 当前显示图片的链接
+  })
+}
+// 添加格式化可信度的方法
+const formatConfidence = (confidence) => {
+  // 如果已经是字符串且包含%，直接返回
+  if (typeof confidence === 'string' && confidence.includes('%')) {
+    return confidence
+  }
+  // 如果是小数，转换为百分数
+  const num = parseFloat(confidence)
+  if (!isNaN(num)) {
+    return `${Math.round(num * 100)}%`
+  }
+  // 其他情况原样返回
+  return confidence
+}
+// 方法
+const fixDateStr = (str) => {
+  if (!str) return ''
+  return str.replace(/-/g, '/').replace(/(\d{2}:\d{2})$/, '$1:00')
+}
+
+const filterRecords = () => {
+  let list = [...records.value]
+  
+  // 搜索筛选
+  if (searchText.value) {
+    list = list.filter(r => r.name.includes(searchText.value))
+  }
+  
+  // 时间筛选
+  if (timeFilter.value === 1) {
+    const weekAgo = Date.now() - 7 * 24 * 60 * 60 * 1000
+    list = list.filter(r => new Date(fixDateStr(r.time)).getTime() > weekAgo)
+  } else if (timeFilter.value === 2) {
+    const monthAgo = Date.now() - 30 * 24 * 60 * 60 * 1000
+    list = list.filter(r => new Date(fixDateStr(r.time)).getTime() > monthAgo)
+  }
+  
+  // 可信度排序
+  if (confidenceFilter.value === 1) {
+    list.sort((a, b) => parseInt(b.confidence) - parseInt(a.confidence))
+  } else if (confidenceFilter.value === 2) {
+    list.sort((a, b) => parseInt(a.confidence) - parseInt(b.confidence))
+  }
+  
+  filteredRecords.value = list
+}
+
+const onTimeChange = (e) => {
+  timeFilter.value = e.detail.value
+  filterRecords()
+}
+
+const onConfidenceChange = (e) => {
+  confidenceFilter.value = e.detail.value
+  filterRecords()
+}
+
+const viewDetail = (item) => {
+  uni.navigateTo({ url: `/pages/pestDetail/pestDetail?pestId=${item.pest_id}` })
+}
+
+const deleteRecord = (item) => {
+  uni.showModal({
+    title: '确认删除',
+    content: '确定要删除该识别记录吗？',
+    success: (res) => {
+      if (res.confirm) {
+        records.value = records.value.filter(r => r.id !== item.id)
+        filterRecords()
+        calcStat()
       }
     }
-  },
-  created() {
-    this.filterRecords()
-    this.calcStat()
-  },
-  methods: {
-    fixDateStr(str) {
-      // "2024-07-15 14:30" => "2024/07/15 14:30:00"
-      if (!str) return ''
-      return str.replace(/-/g, '/').replace(/(\d{2}:\d{2})$/, '$1:00')
-    },
-    filterRecords() {
-      // 搜索和筛选逻辑
-      let list = this.records
-      if (this.searchText) {
-        list = list.filter(r => r.name.includes(this.searchText))
-      }
-      // 时间筛选
-      if (this.timeFilter === 1) {
-        // 最近一周
-        const weekAgo = Date.now() - 7 * 24 * 60 * 60 * 1000
-        list = list.filter(r => new Date(this.fixDateStr(r.time)).getTime() > weekAgo)
-      } else if (this.timeFilter === 2) {
-        // 最近一个月
-        const monthAgo = Date.now() - 30 * 24 * 60 * 60 * 1000
-        list = list.filter(r => new Date(this.fixDateStr(r.time)).getTime() > monthAgo)
-      }
-      // 可信度排序
-      if (this.confidenceFilter === 1) {
-        list = list.slice().sort((a, b) => parseInt(b.confidence) - parseInt(a.confidence))
-      } else if (this.confidenceFilter === 2) {
-        list = list.slice().sort((a, b) => parseInt(a.confidence) - parseInt(b.confidence))
-      }
-      this.filteredRecords = list
-    },
-    onTimeChange(e) {
-      this.timeFilter = e.detail.value
-      this.filterRecords()
-    },
-    onConfidenceChange(e) {
-      this.confidenceFilter = e.detail.value
-      this.filterRecords()
-    },
-    viewDetail(item) {
-      uni.navigateTo({ url: `/pages/profile/recordDetail?id=${item.id}` })
-    },
-    deleteRecord(item) {
-      uni.showModal({
-        title: '确认删除',
-        content: '确定要删除该识别记录吗？',
-        success: (res) => {
-          if (res.confirm) {
-            this.records = this.records.filter(r => r.id !== item.id)
-            this.filterRecords()
-            this.calcStat()
-          }
-        }
-      })
-    },
-    calcStat() {
-      // 统计本月识别次数和常见类型
-      const now = new Date()
-      const month = now.getMonth() + 1
-      const monthRecords = this.records.filter(r => new Date(this.fixDateStr(r.time)).getMonth() + 1 === month)
-      this.stat.count = monthRecords.length
-      // 统计最多的type
-      const typeCount = {}
-      monthRecords.forEach(r => {
-        typeCount[r.type] = (typeCount[r.type] || 0) + 1
-      })
-      let topType = ''
-      let max = 0
-      for (const k in typeCount) {
-        if (typeCount[k] > max) {
-          max = typeCount[k]
-          topType = k
-        }
-      }
-      this.stat.topType = topType ? `${Math.round((max / (monthRecords.length || 1)) * 100)}%是${topType}` : '无'
+  })
+}
+
+const calcStat = () => {
+  const now = new Date()
+  const currentMonth = now.getMonth() + 1
+  const currentYear = now.getFullYear()
+  
+  const monthRecords = records.value.filter(r => {
+    const recordDate = new Date(r.detection_time)
+    return (
+      recordDate.getMonth() + 1 === currentMonth && 
+      recordDate.getFullYear() === currentYear
+    )
+  })
+  
+  stat.value.count = monthRecords.length
+  
+  const typeCount = {}
+  monthRecords.forEach(r => {
+    typeCount[r.pest_name] = (typeCount[r.pest_name] || 0) + 1
+  })
+  
+  let topType = ''
+  let max = 0
+  for (const k in typeCount) {
+    if (typeCount[k] > max) {
+      max = typeCount[k]
+      topType = k
     }
   }
+  
+  stat.value.topType = topType 
+    ? `${Math.round((max / (monthRecords.length || 1)) * 100)}%是${topType}` 
+    : '无'
 }
+// 生命周期钩子
+onMounted(async () => {
+  const response = await getRecords()
+  records.value = response.data
+  filterRecords()
+  calcStat()
+})
 </script>
 
 <style scoped>
@@ -220,9 +255,10 @@ export default {
   display: flex;
   gap: 12rpx;
   margin-top: 8rpx;
+  flex-direction: row;
 }
 .record-actions button {
-  font-size: 22rpx;
+  font-size: 16rpx;
   padding: 4rpx 16rpx;
   border-radius: 8rpx;
   background: #e5d3b6;

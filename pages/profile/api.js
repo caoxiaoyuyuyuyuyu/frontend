@@ -3,7 +3,7 @@
  * 包含用户信息、设置、记录、分享等功能
  */
 
-import { request, uploadFile } from '../../utils/apiConfig.js';
+import { request, uploadFile, getApiUrl } from '../../utils/apiConfig.js';
 
 /**
  * 获取用户信息
@@ -43,7 +43,18 @@ export const updateUserSettings = (settings) => request({ url: '/user/settings',
  * @param {Object} params - 请求参数
  * @returns {Promise} 返回识别记录
  */
-export const getRecords = (params = {}) => request({ url: '/user/records', method: 'GET', data: params });
+export const getRecords = (params = {}) => request({ url: '/detect/records', method: 'GET', data: params });
+
+/**
+ * 获取害虫图片URL
+ * @param {String} imageName - 图片文件名
+ * @returns {String} 完整图片URL
+ */
+export const getImageUrl = (imageName) => {
+  if (!imageName) return '';
+  return getApiUrl(`/detect/images/${imageName}`);
+};
+
 
 /**
  * 获取识别记录详情

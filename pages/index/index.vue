@@ -2,6 +2,37 @@
     <view class="container">
         <!-- 登录弹窗组件 -->
         <login v-if="showLoginPopup" :show="showLoginPopup" @success="onLoginSuccess" />
+        
+        <!-- 识别结果弹窗 -->
+        <view class="result-popup" v-if="showResultPopup">
+            <view class="popup-mask" @click="closeResultPopup"></view>
+            <view class="popup-content">
+                <view class="popup-header">
+                    <text class="popup-title">识别结果</text>
+                    <text class="close-btn" @click="closeResultPopup">×</text>
+                </view>
+                
+                <view class="result-summary">
+                    <text class="summary-text">共识别到 {{ detectionResults.length }} 种害虫</text>
+                </view>
+                
+                <scroll-view class="result-list" scroll-y>
+                    <view class="result-item" v-for="(item, index) in detectionResults" :key="index" @click="goToPestDetail(item.pest_id)">
+                        <image class="result-image" :src="getImageUrl(item.image_url)" mode="aspectFill"></image>
+                        <view class="result-info">
+                            <text class="pest-name">{{ item.pest_name }}</text>
+                            <text class="confidence">可信度: {{ (item.confidence * 100).toFixed(1) }}%</text>
+                        </view>
+                        <view class="result-arrow">›</view>
+                    </view>
+                </scroll-view>
+                
+                <!-- <view class="popup-footer">
+                    <button class="record-btn" @click="goToRecordPage">查看识别记录</button>
+                </view> -->
+            </view>
+        </view>
+        
         <!-- 顶部标题区域 -->
         <view class="header">
             <view class="title-container">
@@ -56,6 +87,9 @@
 
 <script>
     import login from '../../components/login/login.vue'
+    import { identifyImage } from './api.js'
+	import { getApiUrl } from '../../utils/apiConfig.js';
+    
     export default {
         components: { login },
         data() {
@@ -63,10 +97,12 @@
                 title: '智慧农业',
                 showLoginPopup: false,
                 hasLogin: false,
-                userInfo: {}
+                userInfo: {},
+                showResultPopup: false,
+                detectionResults: []
             }
         },
-        onLoad() {
+        onShow() {
             this.checkLogin();
         },
         methods: {
@@ -95,7 +131,6 @@
                     sourceType: ['camera'],
                     success: (res) => {
                         console.log('拍照成功:', res.tempFilePaths);
-                        // 这里可以跳转到识别页面
                         this.uploadAndIdentify(res.tempFilePaths[0]);
                     },
                     fail: (err) => {
@@ -115,7 +150,6 @@
                     sourceType: ['album'],
                     success: (res) => {
                         console.log('选择照片成功:', res.tempFilePaths);
-                        // 这里可以跳转到识别页面
                         this.uploadAndIdentify(res.tempFilePaths[0]);
                     },
                     fail: (err) => {
@@ -129,20 +163,59 @@
             },
             
             // 上传并识别
-            uploadAndIdentify(imagePath) {
-                // 这里可以添加图片上传和识别的逻辑
+            async uploadAndIdentify(imagePath) {
                 uni.showLoading({
-                    title: '正在识别...'
+                    title: '正在识别...',
+                    mask: true
                 });
                 
-                // 模拟识别过程
-                setTimeout(() => {
-                    uni.hideLoading();
+                try {
+                    const response = await identifyImage(imagePath);
+                    console.log('识别结果:', response);
+                    
+                    if (response.code === 200) {
+                        this.detectionResults = response.data;
+                        this.showResultPopup = true;
+                    } else {
+                        uni.showToast({
+                            title: response.message || '识别失败',
+                            icon: 'none'
+                        });
+                    }
+                } catch (error) {
+                    console.error('识别出错:', error);
                     uni.showToast({
-                        title: '识别功能开发中',
+                        title: '识别服务异常',
                         icon: 'none'
                     });
-                }, 2000);
+                } finally {
+                    uni.hideLoading();
+                }
+            },
+            
+            // 获取图片完整URL
+            getImageUrl(imagePath) {
+			  if (!imagePath) return '';
+			  return getApiUrl(`/detect/images/${imagePath}`);
+            },
+            
+            // 关闭结果弹窗
+            closeResultPopup() {
+                this.showResultPopup = false;
+            },
+            
+            // 跳转到害虫详情页
+            goToPestDetail(pestId) {
+                uni.navigateTo({
+                    url: `/pages/pestDetail/pestDetail?pestId=${pestId}`
+                });
+            },
+            
+            // 跳转到识别记录页
+            goToRecordPage() {
+                uni.navigateTo({
+                    url: '/pages/profile/record'
+                });
             }
         }
     }
@@ -363,10 +436,10 @@
     
     .footer-content {
         text-align: center;
-        background: rgba(255, 255, 255, 0.8);
+        /* background: rgba(255, 255, 255, 0.8); */
         padding: 24rpx 32rpx;
         border-radius: 16rpx;
-        border: 1rpx solid rgba(76, 175, 80, 0.2);
+        /* border: 1rpx solid rgba(76, 175, 80, 0.2); */
     }
     
     .footer-text {
@@ -382,5 +455,130 @@
         color: #4CAF50;
         display: block;
         opacity: 0.8;
+    }
+    /* 结果弹窗样式 */
+    .result-popup {
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        z-index: 999;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+    
+    .popup-mask {
+        position: absolute;
+		z-index: -1;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background-color: rgba(0, 0, 0, 0.5);
+    }
+    
+    .popup-content {
+        width: 90%;
+        max-height: 80vh;
+        background-color: #fff;
+        border-radius: 24rpx;
+        overflow: hidden;
+        display: flex;
+        flex-direction: column;
+        box-shadow: 0 10rpx 50rpx rgba(0, 0, 0, 0.2);
+    }
+    
+    .popup-header {
+        padding: 30rpx;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        border-bottom: 1rpx solid #f5f5f5;
+    }
+    
+    .popup-title {
+        font-size: 36rpx;
+        font-weight: bold;
+        color: #333;
+    }
+    
+    .close-btn {
+        font-size: 44rpx;
+        color: #999;
+        padding: 10rpx 20rpx;
+    }
+    
+    .result-summary {
+        padding: 20rpx 30rpx;
+        background-color: #f9f9f9;
+    }
+    
+    .summary-text {
+        font-size: 28rpx;
+        color: #666;
+    }
+    
+    .result-list {
+        flex: 1;
+        padding: 20rpx 0;
+    }
+    
+    .result-item {
+        display: flex;
+        align-items: center;
+        padding: 20rpx 30rpx;
+        border-bottom: 1rpx solid #f5f5f5;
+    }
+    
+    .result-image {
+        width: 120rpx;
+        height: 120rpx;
+        border-radius: 12rpx;
+        margin-right: 20rpx;
+    }
+    
+    .result-info {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+    }
+    
+    .pest-name {
+        font-size: 32rpx;
+        color: #333;
+        margin-bottom: 10rpx;
+    }
+    
+    .confidence {
+        font-size: 26rpx;
+        color: #666;
+    }
+    
+    .result-arrow {
+        font-size: 40rpx;
+        color: #999;
+        margin-left: 20rpx;
+    }
+    
+    .popup-footer {
+        padding: 20rpx 30rpx;
+        border-top: 1rpx solid #f5f5f5;
+    }
+    
+    .record-btn {
+        width: 100%;
+        height: 80rpx;
+        line-height: 80rpx;
+        background-color: #4CAF50;
+        color: white;
+        border-radius: 40rpx;
+        font-size: 30rpx;
+        border: none;
+    }
+    
+    .record-btn::after {
+        border: none;
     }
 </style>

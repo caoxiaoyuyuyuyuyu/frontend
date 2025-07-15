@@ -26,21 +26,7 @@
       </view>
     </view>
     <view class="help-section">
-      <view class="help-title">4. 会员等级介绍</view>
-      <view class="help-content">
-        <view>普通会员：注册即为普通会员，可享受基础识别服务。</view>
-        <view>高级会员：通过贡献识别积分升级，享受更多识别次数和专属服务。</view>
-        <view>等级越高，识别次数和功能权限越多。</view>
-      </view>
-    </view>
-    <view class="help-section">
-      <view class="help-title">5. 识别次数说明</view>
-      <view class="help-content">
-        <view>每位用户每日有一定免费识别次数，会员等级越高，次数越多。识别次数用完后可通过提升等级或参与活动获得更多机会。</view>
-      </view>
-    </view>
-    <view class="help-section">
-      <view class="help-title">6. 常见问题</view>
+      <view class="help-title">4. 常见问题</view>
       <view class="help-content">
         <view>Q：识别结果准确吗？</view>
         <view>A：系统基于大量数据和AI算法，准确率较高，但部分罕见害虫可能存在误差。</view>

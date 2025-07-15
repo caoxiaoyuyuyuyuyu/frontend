@@ -35,7 +35,7 @@ export const saveChatToBackend = (chat) =>
  * @returns {Promise} 返回历史对话列表
  */
 export const loadHistoryChats = (params = {}) =>
-  request({ url: '/chat/history', method: 'GET', data: params });
+  request({ url: '/chat/conversations', method: 'GET', data: params });
 
 /**
  * 获取指定对话详情
@@ -44,8 +44,11 @@ export const loadHistoryChats = (params = {}) =>
  */
 export const getChatDetail = (chatId) => {
   return request({
-    url: `/chat/${chatId}`,
-    method: 'GET'
+    url: `/chat/conversation`,
+    method: 'GET',
+	data: {
+		"conversation_id": chatId
+	}
   });
 };
 
@@ -78,7 +81,7 @@ export const setSelectedChat = (chat) => {
  * 获取选中的对话
  * @returns {Object|null} 选中的对话
  */
-export const getSelectedChat = () => {
+export const getSelectedChat = (id) => {
   try {
     const chat = uni.getStorageSync('selectedChat');
     if (chat) uni.removeStorageSync('selectedChat');

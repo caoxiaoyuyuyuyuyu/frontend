@@ -6,13 +6,13 @@
 // API基础配置
 export const API_CONFIG = {
   // 基础URL
-  BASE_URL: 'http://192.168.241.56:5000',
+  BASE_URL: 'http://localhost:5000',
   
   // API版本
   API_VERSION: 'api',
   
   // 请求超时时间（毫秒）
-  TIMEOUT: 10000,
+  TIMEOUT: 50000,
   
   // 重试次数
   RETRY_TIMES: 3,
@@ -141,6 +141,7 @@ export const request = (options) => {
     timeout: API_CONFIG.TIMEOUT,
     ...rest
   });
+  console.log(config)
   
   return new Promise((resolve, reject) => {
     uni.request({

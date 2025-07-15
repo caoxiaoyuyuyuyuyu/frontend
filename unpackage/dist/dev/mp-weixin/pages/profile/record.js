@@ -1,93 +1,79 @@
 "use strict";
 const common_vendor = require("../../common/vendor.js");
+const pages_profile_api = require("./api.js");
+const utils_common = require("../../utils/common.js");
 const _sfc_main = {
-  data() {
-    return {
-      records: [
-        // 示例数据，实际应从后端获取
-        {
-          id: 1,
-          image: "/static/pest1.jpg",
-          name: "棉铃虫",
-          time: "2024/07/15 14:30:00",
-          confidence: "92%",
-          type: "蛾类"
-        }
-        // ...
-      ],
-      searchText: "",
-      timeOptions: ["全部", "最近一周", "最近一个月"],
-      timeFilter: 0,
-      confidenceOptions: ["默认排序", "高可信度优先", "低可信度优先"],
-      confidenceFilter: 0,
-      filteredRecords: [],
-      stat: {
-        count: 0,
-        topType: ""
-      }
+  __name: "record",
+  setup(__props) {
+    const records = common_vendor.ref([]);
+    const searchText = common_vendor.ref("");
+    common_vendor.ref(["全部", "最近一周", "最近一个月"]);
+    const timeFilter = common_vendor.ref(0);
+    common_vendor.ref(["默认排序", "高可信度优先", "低可信度优先"]);
+    const confidenceFilter = common_vendor.ref(0);
+    const filteredRecords = common_vendor.ref([]);
+    const stat = common_vendor.ref({
+      count: 0,
+      topType: ""
+    });
+    const previewImage = (imageUrl) => {
+      const fullUrl = pages_profile_api.getImageUrl(imageUrl);
+      common_vendor.index.previewImage({
+        urls: [fullUrl],
+        // 支持多张图片预览，这里我们只传当前图片
+        current: fullUrl
+        // 当前显示图片的链接
+      });
     };
-  },
-  created() {
-    this.filterRecords();
-    this.calcStat();
-  },
-  methods: {
-    fixDateStr(str) {
+    const formatConfidence = (confidence) => {
+      if (typeof confidence === "string" && confidence.includes("%")) {
+        return confidence;
+      }
+      const num = parseFloat(confidence);
+      if (!isNaN(num)) {
+        return `${Math.round(num * 100)}%`;
+      }
+      return confidence;
+    };
+    const fixDateStr = (str) => {
       if (!str)
         return "";
       return str.replace(/-/g, "/").replace(/(\d{2}:\d{2})$/, "$1:00");
-    },
-    filterRecords() {
-      let list = this.records;
-      if (this.searchText) {
-        list = list.filter((r) => r.name.includes(this.searchText));
+    };
+    const filterRecords = () => {
+      let list = [...records.value];
+      if (searchText.value) {
+        list = list.filter((r) => r.name.includes(searchText.value));
       }
-      if (this.timeFilter === 1) {
+      if (timeFilter.value === 1) {
         const weekAgo = Date.now() - 7 * 24 * 60 * 60 * 1e3;
-        list = list.filter((r) => new Date(this.fixDateStr(r.time)).getTime() > weekAgo);
-      } else if (this.timeFilter === 2) {
+        list = list.filter((r) => new Date(fixDateStr(r.time)).getTime() > weekAgo);
+      } else if (timeFilter.value === 2) {
         const monthAgo = Date.now() - 30 * 24 * 60 * 60 * 1e3;
-        list = list.filter((r) => new Date(this.fixDateStr(r.time)).getTime() > monthAgo);
+        list = list.filter((r) => new Date(fixDateStr(r.time)).getTime() > monthAgo);
       }
-      if (this.confidenceFilter === 1) {
-        list = list.slice().sort((a, b) => parseInt(b.confidence) - parseInt(a.confidence));
-      } else if (this.confidenceFilter === 2) {
-        list = list.slice().sort((a, b) => parseInt(a.confidence) - parseInt(b.confidence));
+      if (confidenceFilter.value === 1) {
+        list.sort((a, b) => parseInt(b.confidence) - parseInt(a.confidence));
+      } else if (confidenceFilter.value === 2) {
+        list.sort((a, b) => parseInt(a.confidence) - parseInt(b.confidence));
       }
-      this.filteredRecords = list;
-    },
-    onTimeChange(e) {
-      this.timeFilter = e.detail.value;
-      this.filterRecords();
-    },
-    onConfidenceChange(e) {
-      this.confidenceFilter = e.detail.value;
-      this.filterRecords();
-    },
-    viewDetail(item) {
-      common_vendor.index.navigateTo({ url: `/pages/profile/recordDetail?id=${item.id}` });
-    },
-    deleteRecord(item) {
-      common_vendor.index.showModal({
-        title: "确认删除",
-        content: "确定要删除该识别记录吗？",
-        success: (res) => {
-          if (res.confirm) {
-            this.records = this.records.filter((r) => r.id !== item.id);
-            this.filterRecords();
-            this.calcStat();
-          }
-        }
-      });
-    },
-    calcStat() {
+      filteredRecords.value = list;
+    };
+    const viewDetail = (item) => {
+      common_vendor.index.navigateTo({ url: `/pages/pestDetail/pestDetail?pestId=${item.pest_id}` });
+    };
+    const calcStat = () => {
       const now = /* @__PURE__ */ new Date();
-      const month = now.getMonth() + 1;
-      const monthRecords = this.records.filter((r) => new Date(this.fixDateStr(r.time)).getMonth() + 1 === month);
-      this.stat.count = monthRecords.length;
+      const currentMonth = now.getMonth() + 1;
+      const currentYear = now.getFullYear();
+      const monthRecords = records.value.filter((r) => {
+        const recordDate = new Date(r.detection_time);
+        return recordDate.getMonth() + 1 === currentMonth && recordDate.getFullYear() === currentYear;
+      });
+      stat.value.count = monthRecords.length;
       const typeCount = {};
       monthRecords.forEach((r) => {
-        typeCount[r.type] = (typeCount[r.type] || 0) + 1;
+        typeCount[r.pest_name] = (typeCount[r.pest_name] || 0) + 1;
       });
       let topType = "";
       let max = 0;
@@ -97,39 +83,35 @@ const _sfc_main = {
           topType = k;
         }
       }
-      this.stat.topType = topType ? `${Math.round(max / (monthRecords.length || 1) * 100)}%是${topType}` : "无";
-    }
+      stat.value.topType = topType ? `${Math.round(max / (monthRecords.length || 1) * 100)}%是${topType}` : "无";
+    };
+    common_vendor.onMounted(async () => {
+      const response = await pages_profile_api.getRecords();
+      records.value = response.data;
+      filterRecords();
+      calcStat();
+    });
+    return (_ctx, _cache) => {
+      return common_vendor.e({
+        a: common_vendor.t(stat.value.count),
+        b: common_vendor.t(stat.value.topType),
+        c: filteredRecords.value.length === 0
+      }, filteredRecords.value.length === 0 ? {} : {}, {
+        d: common_vendor.f(filteredRecords.value, (item, k0, i0) => {
+          return {
+            a: common_vendor.unref(pages_profile_api.getImageUrl)(item.image_url),
+            b: common_vendor.o(($event) => previewImage(item.image_url), item.id),
+            c: common_vendor.t(item.pest_name),
+            d: common_vendor.t(common_vendor.unref(utils_common.formatDate)(item.detection_time)),
+            e: common_vendor.t(formatConfidence(item.confidence)),
+            f: common_vendor.o(($event) => viewDetail(item), item.id),
+            g: item.id
+          };
+        })
+      });
+    };
   }
 };
-function _sfc_render(_ctx, _cache, $props, $setup, $data, $options) {
-  return common_vendor.e({
-    a: common_vendor.o([($event) => $data.searchText = $event.detail.value, (...args) => $options.filterRecords && $options.filterRecords(...args)]),
-    b: $data.searchText,
-    c: common_vendor.t($data.timeOptions[$data.timeFilter]),
-    d: $data.timeOptions,
-    e: $data.timeFilter,
-    f: common_vendor.o((...args) => $options.onTimeChange && $options.onTimeChange(...args)),
-    g: common_vendor.t($data.confidenceOptions[$data.confidenceFilter]),
-    h: $data.confidenceOptions,
-    i: $data.confidenceFilter,
-    j: common_vendor.o((...args) => $options.onConfidenceChange && $options.onConfidenceChange(...args)),
-    k: common_vendor.t($data.stat.count),
-    l: common_vendor.t($data.stat.topType),
-    m: $data.filteredRecords.length === 0
-  }, $data.filteredRecords.length === 0 ? {} : {}, {
-    n: common_vendor.f($data.filteredRecords, (item, k0, i0) => {
-      return {
-        a: item.image,
-        b: common_vendor.t(item.name),
-        c: common_vendor.t(item.time),
-        d: common_vendor.t(item.confidence),
-        e: common_vendor.o(($event) => $options.viewDetail(item), item.id),
-        f: common_vendor.o(($event) => $options.deleteRecord(item), item.id),
-        g: item.id
-      };
-    })
-  });
-}
-const MiniProgramPage = /* @__PURE__ */ common_vendor._export_sfc(_sfc_main, [["render", _sfc_render], ["__scopeId", "data-v-bd838ad3"]]);
+const MiniProgramPage = /* @__PURE__ */ common_vendor._export_sfc(_sfc_main, [["__scopeId", "data-v-bd838ad3"]]);
 wx.createPage(MiniProgramPage);
 //# sourceMappingURL=../../../.sourcemap/mp-weixin/pages/profile/record.js.map

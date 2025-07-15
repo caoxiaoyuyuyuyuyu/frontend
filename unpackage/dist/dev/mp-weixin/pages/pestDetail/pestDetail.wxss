@@ -46,7 +46,7 @@
 	border-radius: 24rpx;
 	box-shadow: 0 8rpx 32rpx rgba(0,0,0,0.10);
 	padding: 32rpx 48rpx;
-	margin: -60rpx 32rpx 32rpx 32rpx;
+	margin: 32rpx;
 }
 .info-img-box.data-v-bf770616 {
 	width: 120rpx;

@@ -1,37 +1,16 @@
 <template>
   <view class="profile-container">
+	<!-- 登录弹窗组件 -->
+	<login v-if="showLoginPopup" :show="showLoginPopup" @success="onLoginSuccess" />
     <!-- 用户信息 -->
     <view class="profile-header">
-      <view class="avatar-upload" @click="chooseAvatar">
-        <image class="avatar" :src="avatarUrl" mode="aspectFill" />
-        <view class="avatar-edit">更换头像</view>
+      <view class="avatar-upload">
+        <image class="avatar" :src="userInfo.avatar" mode="aspectFill" />
       </view>
       <view class="user-info">
         <view class="user-row">
-          <input class="nickname-input" v-model="nickname" @blur="saveNickname" />
-          <view class="level-tag">lv.1 <text class="arrow">▼</text></view>
+          <input class="nickname-input" v-model="userInfo.nickname" @blur="modifyNickname" />
         </view>
-        <text class="uid">UID: MU196338</text>
-        <view class="contribution-row">
-          <text class="contribution-label">识别积分：</text>
-          <text class="contribution-value clickable" @click="showPointInfo">0</text>
-        </view>
-      </view>
-    </view>
-
-    <!-- 识别次数和进度条 -->
-    <view class="profile-progress">
-      <view class="progress-row">
-        <text>剩余识别次数：5次</text>
-      </view>
-      <view class="progress-bar-bg">
-        <view class="progress-bar-fill" :style="{ width: '10%' }"></view>
-      </view>
-      <view class="progress-info">
-        <text>lv1</text>
-        <text class="progress-tip">还需50识别积分升级</text>
-        <text>lv2</text>
-        <view class="member-tag">普通会员</view>
       </view>
     </view>
 
@@ -52,49 +31,57 @@
 export default {
   data() {
     return {
+	  showLoginPopup: false,
+	  hasLogin: false,
+	  userInfo: {},
       features: [
         { text: '识别记录', icon: '/static/logo.png', url: '/pages/profile/record' },
-        { text: '害虫百科贡献', icon: '/static/logo.png', url: '/pages/profile/pestShare' },
         { text: '识别帮助', icon: '/static/logo.png', url: '/pages/profile/help' },
         { text: '联系客服', icon: '/static/logo.png', url: '' },
+        { text: '退出登录', icon: '/static/logo.png', url: '' },
       ],
-      avatarUrl: 'https://thirdwx.qlogo.cn/mmopen/vi_32/POgEwh4mIHO4nibH0KlMECNjjGxQUq24ZEaGT4poC6icRiccVGKSyXwibcPq4BWmiaIGuG1icwxaQX6grC9VemZoJ8rg/132',
-      nickname: '微信用户',
     }
   },
+	onShow() {
+		this.checkLogin();
+	},
   methods: {
+	// 检查登录状态
+	checkLogin() {
+		const token = uni.getStorageSync('token')
+		if (token) {
+			this.hasLogin = true
+			this.userInfo = uni.getStorageSync('userInfo') || {}
+			this.showLoginPopup = false
+		} else {
+			this.hasLogin = false
+			this.showLoginPopup = true
+		}
+	},
+	// 登录弹窗回调
+	onLoginSuccess(userInfo) {
+		this.hasLogin = true
+		this.userInfo = userInfo
+		this.showLoginPopup = false
+	},
     onFeatureClick(item) {
-      if (item.url) {
-          uni.navigateTo({ url: item.url });
-        }  else {
-        if (item.text === '联系客服') {
-          uni.showToast({ title: '请联系客服：123-456-7890', icon: 'none' });
-        } else {
-          uni.showToast({ title: item.text, icon: 'none' });
-        }
-      }
+	if (item.url) {
+	  uni.navigateTo({ url: item.url });
+	}
+	else if(item.text === '联系客服') {
+	  uni.showToast({ title: '请联系客服：123-456-7890', icon: 'none' });
+	} 
+	else if(item.text === '退出登录') {
+		uni.removeStorageSync('userInfo')
+		uni.removeStorageSync('token');
+		uni.reLaunch({
+			url:"/pages/index/index"
+		})
+	}
+	else {
+	  uni.showToast({ title: item.text, icon: 'none' });
+	}
     },
-    showPointInfo() {
-      uni.showModal({
-        title: '识别积分说明',
-        content: '识别积分用于衡量用户在平台的活跃度和贡献度。积分可通过识别害虫、参与活动等方式获得，积分越高会员等级越高，可享受更多权益。',
-        showCancel: false
-      })
-    },
-    chooseAvatar() {
-      uni.chooseImage({
-        count: 1,
-        sizeType: ['compressed'],
-        sourceType: ['album', 'camera'],
-        success: (res) => {
-          this.avatarUrl = res.tempFilePaths[0]
-        }
-      })
-    },
-    saveNickname() {
-      // 可在此处添加保存昵称到后端的逻辑
-      uni.showToast({ title: '昵称已修改', icon: 'none' })
-    }
   }
 }
 </script>
@@ -150,16 +137,6 @@ export default {
   outline: none;
   width: 220rpx;
 }
-.level-tag {
-  background: #e5d3b6;
-  color: #7d5c1e;
-  font-size: 26rpx;
-  border-radius: 20rpx;
-  padding: 2rpx 16rpx;
-  margin-right: 8rpx;
-  display: flex;
-  align-items: center;
-}
 .arrow {
   font-size: 18rpx;
   margin-left: 4rpx;
@@ -173,64 +150,6 @@ export default {
   display: flex;
   align-items: center;
   margin-top: 8rpx;
-}
-.contribution-label {
-  font-size: 26rpx;
-  color: #b0b0b0;
-}
-.contribution-value {
-  font-size: 28rpx;
-  color: #e5d3b6;
-  margin-left: 4rpx;
-}
-.contribution-value.clickable {
-  text-decoration: underline;
-  cursor: pointer;
-}
-.profile-progress {
-  background: #2d2e3a;
-  margin: 24rpx 30rpx 0 30rpx;
-  border-radius: 20rpx;
-  padding: 24rpx 24rpx 16rpx 24rpx;
-  color: #fff;
-  position: relative;
-}
-.progress-row {
-  font-size: 30rpx;
-  margin-bottom: 12rpx;
-}
-.progress-bar-bg {
-  width: 100%;
-  height: 12rpx;
-  background: #44455a;
-  border-radius: 8rpx;
-  overflow: hidden;
-  margin-bottom: 8rpx;
-}
-.progress-bar-fill {
-  height: 100%;
-  background: #e5d3b6;
-  border-radius: 8rpx;
-  width: 10%;
-}
-.progress-info {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  font-size: 26rpx;
-  margin-top: 4rpx;
-}
-.progress-tip {
-  flex: 1;
-  text-align: center;
-  color: #e5d3b6;
-}
-.member-tag {
-  background: #e5d3b6;
-  color: #7d5c1e;
-  border-radius: 20rpx;
-  padding: 2rpx 16rpx;
-  font-size: 26rpx;
 }
 .profile-section {
   background: #fff;

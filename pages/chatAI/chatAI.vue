@@ -46,31 +46,29 @@
 			<view 
 				v-for="(message, index) in messageList" 
 				:key="index"
-				:class="['message-item', message.type === 'user' ? 'user-message' : 'ai-message', isMessageHighlighted(message) ? 'highlighted-message' : '']"
+				:class="['message-item', message.role === 'user' ? 'user-message' : 'ai-message', isMessageHighlighted(message) ? 'highlighted-message' : '']"
 				:id="'msg-' + index"
 			>
 				<view class="message-content">
 					<view class="avatar">
 						<image 
-							:src="message.type === 'user' ? userAvatar : aiAvatar" 
+							:src="message.role === 'user' ? userAvatar : aiAvatar" 
 							class="avatar-img"
 						></image>
 					</view>
 					<view class="message-bubble">
-						<!-- 引用内容显示 -->
-						<text v-if="message.hasQuote" class="quote-content">{{ getQuoteContent(message.content) }}</text>
-						<!-- 分隔线 -->
-						<view v-if="message.hasQuote" class="quote-divider"></view>
-						<text v-if="!message.image" class="message-text">{{ getMainContent(message.content) }}</text>
-						<image v-if="message.image" :src="message.image" class="message-image" mode="aspectFit"></image>
-						<text class="message-time">{{ message.time }}</text>
+						<rich-text 
+						  :nodes="renderMarkdown(message.content)" 
+						  class="message-text"
+						></rich-text>
+						<text class="message-time">{{ formatTime(message.timestamp) }}</text>
 						
 						<!-- AI消息的操作按钮 -->
-						<view v-if="message.type === 'ai'" class="message-actions">
+						<view v-if="message.role === 'assistant'" class="message-actions">
 							<view class="action-btn" @tap="copyMessage(message.content)">
 								<image src="/static/copy.png" class="action-icon"></image>
 							</view>
-							<view class="action-btn" @tap="quoteMessage(message)">
+							<!-- <view class="action-btn" @tap="quoteMessage(message)">
 								<image src="/static/quote.png" class="action-icon"></image>
 							</view>
 							<view class="action-btn" @tap="toggleStar(message, index)">
@@ -78,7 +76,7 @@
 							</view>
 							<view class="action-btn" @tap="feedbackMessage(message)">
 								<image src="/static/notification.png" class="action-icon"></image>
-							</view>
+							</view> -->
 						</view>
 					</view>
 				</view>
@@ -101,30 +99,19 @@
 			</view>
 		</scroll-view>
 		
-		<!-- 引用提示框 -->
-		<view v-if="quotedMessage" class="quote-container">
-			<view class="quote-content">
-				<text class="quote-label">引用：</text>
-				<text class="quote-text">{{ quotedMessage.content }}</text>
-				<view class="quote-close" @tap="clearQuote">
-					<text class="close-icon">×</text>
-				</view>
-			</view>
-		</view>
-		
 		<!-- 底部输入区域 -->
 		<view class="input-area">
 			<view class="input-container">
 				<input 
 					class="message-input" 
-					v-model="inputMessage" 
+					v-model="message" 
 					placeholder="请输入您的问题..."
 					:disabled="isLoading"
 					@confirm="sendMessage"
 				/>
 				<button 
 					class="send-btn" 
-					:disabled="!inputMessage.trim() || isLoading"
+					:disabled="!message.trim() || isLoading"
 					@tap="sendMessage"
 				>
 					<image src="/static/up.png" class="send-icon"></image>
@@ -141,78 +128,80 @@
 		getSelectedChat, 
 		copyMessage, 
 		submitFeedback,
-		getCurrentTime,
-		getCurrentDateTime,
-		generateChatId,
-		getChatTitle
+		getChatDetail,
+		setSelectedChat
 	} from './api.js';
+	import markdownIt from 'markdown-it';
 	
 	export default {
 		data() {
 			return {
 				messageList: [], // 消息列表
-				inputMessage: '', // 输入框内容
+				message: '', // 输入框内容
 				isLoading: false, // 是否正在加载
 				scrollTop: 0, // 滚动位置
 				scrollIntoView: '', // 滚动到指定消息
 				userAvatar: '/static/logo.png', // 用户头像
 				aiAvatar: '/static/logo.png', // AI头像
-				currentChatId: null, // 当前对话ID
-				historyChats: [], // 历史对话列表
+				conversation_id: null, // 当前对话ID
+				new_conversation: true,
 				searchKeyword: '', // 搜索关键词
 				searchResults: [], // 搜索结果
-				quotedMessage: null, // 引用的消息
 			}
-		},
-		onLoad() {
-			// 页面加载时初始化新对话状态
-			this.messageList = [];
-			this.currentChatId = generateChatId();
-			this.inputMessage = '';
 		},
 		onShow() {
-			// 检查是否有从历史页面传递过来的对话数据
 			const selectedChat = getSelectedChat();
 			if (selectedChat) {
-				console.log('检测到历史对话数据:', selectedChat);
+				this.conversation_id = selectedChat
+				this.new_conversation = false
 				this.loadChat(selectedChat);
 			} else {
-				// 如果没有选择历史对话，确保是新的对话状态
-				if (this.messageList.length === 0) {
-					this.currentChatId = generateChatId();
-				}
-			}
-		},
-		
-		onHide() {
-			// 页面隐藏时保存当前对话
-			if (this.messageList.length > 0) {
-				this.saveCurrentChat();
+				this.initNewChat();
 			}
 		},
 		methods: {
-			// 显示历史侧边栏
-			showHistorySidebar() {
-				console.log('showHistorySidebar 被调用');
-				// 跳转到历史页面
-				uni.navigateTo({
-					url: '/pages/chatAI/history'
-				});
+			// 渲染Markdown内容
+			renderMarkdown(content) {
+			  if (!content) return '';
+			  
+			  const md = markdownIt({
+				html: false,        // 不解析HTML标签
+				linkify: true,      // 自动将URL转换为链接
+				breaks: true,       // 将换行符转换为<br>
+				typographer: true   // 启用一些排版替换
+			  });
+			  
+			  return md.render(content);
+			},
+			// 初始化新对话
+			initNewChat() {
+				this.messageList = [];
+				this.conversation_id = null;
+				this.new_conversation = true
+				this.message = '';
+				uni.removeStorageSync('selectedChat');
+			},
+			
+			// 格式化时间显示
+			formatTime(timestamp) {
+				if (!timestamp) return '';
+				const date = new Date(timestamp);
+				return `${date.getHours().toString().padStart(2, '0')}:${date.getMinutes().toString().padStart(2, '0')}`;
 			},
 			
 			// 加载指定对话
-			loadChat(chat) {
-				console.log('加载历史对话:', chat);
-				this.currentChatId = chat.id;
-				this.messageList = [...chat.messages];
+			async loadChat(conversation_id) {
+				this.conversation_id = conversation_id;
+				const response = await getChatDetail(this.conversation_id);
+				if (response) {
+					this.messageList = response.conversation || [];
+				} 
 				this.$nextTick(() => {
-					// 延迟滚动确保DOM完全渲染
 					setTimeout(() => {
 						this.scrollToBottom();
 					}, 100);
 				});
 				
-				// 显示加载成功提示
 				uni.showToast({
 					title: '对话加载成功',
 					icon: 'success',
@@ -220,69 +209,24 @@
 				});
 			},
 			
-			// 显示历史对话列表
-			showHistory() {
-				uni.showToast({
-					title: '历史对话功能开发中',
-					icon: 'none'
-				});
-				// 这里可以跳转到历史对话页面或显示历史对话列表
-			},
-			
 			// 创建新对话
 			createNewChat() {
-				// 如果当前有对话内容，询问是否保存
-				if (this.messageList.length > 0) {
-					uni.showModal({
-						title: '创建新对话',
-						content: '确定要开始新的对话吗？当前对话将被保存。',
-						success: (res) => {
-							if (res.confirm) {
-								// 保存当前对话到历史记录
-								this.saveCurrentChat();
-								this.resetToNewChat();
-							}
-						}
-					});
-				} else {
-					// 如果当前没有对话内容，直接创建新对话
-					this.resetToNewChat();
-				}
-			},
-			
-			// 重置为新对话
-			resetToNewChat() {
-				this.messageList = [];
-				// 生成新的对话ID，避免重复
-				this.currentChatId = generateChatId();
-				this.inputMessage = '';
-				uni.showToast({
-					title: '已创建新对话',
-					icon: 'success'
-				});
+				this.initNewChat();
 			},
 			
 			// 保存当前对话
 			async saveCurrentChat() {
 				if (this.messageList.length === 0) return;
 				
-				// 获取对话标题
-				const title = getChatTitle(this.messageList);
-				
-				// 确保有唯一的对话ID
-				const chatId = this.currentChatId || generateChatId();
-				
-				const newChat = {
-					id: chatId,
-					title: title,
-					lastTime: getCurrentDateTime(),
-					messages: [...this.messageList]
+				const chatData = {
+					id: this.currentChatId,
+					messages: this.messageList,
+					lastTime: new Date().toISOString()
 				};
 				
-				// 使用API保存对话到后端
 				try {
-					await saveChatToBackend(newChat);
-					console.log('对话已保存到后端:', newChat);
+					await saveChatToBackend(chatData);
+					console.log('对话已保存:', chatData);
 				} catch (error) {
 					console.error('保存对话失败:', error);
 					uni.showToast({
@@ -292,60 +236,36 @@
 				}
 			},
 			
-
-			
 			// 发送消息
-			sendMessage() {
-				if (!this.inputMessage.trim() || this.isLoading) {
-					return;
-				}
-				
-				// 如果有引用，将引用内容添加到消息中
-				let messageContent = this.inputMessage;
-				let hasQuote = false;
-				if (this.quotedMessage) {
-					messageContent = `引用：${this.quotedMessage.content}\n\n${this.inputMessage}`;
-					hasQuote = true;
-					// 清除引用
-					this.quotedMessage = null;
-				}
+			async sendMessage() {
+				if (!this.message.trim() || this.isLoading) return;
 				
 				// 添加用户消息
-				this.addMessage({
-					type: 'user',
-					content: messageContent,
-					time: this.getCurrentTime(),
-					hasQuote: hasQuote
-				});
+				const userMessage = {
+					role: 'user',
+					content: this.message,
+					timestamp: new Date().toISOString()
+				};
 				
-				const userQuestion = this.inputMessage;
-				this.inputMessage = '';
-				
-				// 显示加载状态
+				this.addMessage(userMessage);
+				const question = this.message;
+				this.message = '';
 				this.isLoading = true;
 				
-				// 模拟AI回复（实际项目中应该调用真实的API）
-				setTimeout(() => {
-					this.getAIResponse(userQuestion);
-				}, 1000);
-			},
-			
-			// 获取AI回复
-			async getAIResponse(question) {
 				try {
+					// 获取AI回复
 					const response = await sendAIMessage({
-						content: question,
-						type: 'user',
-						time: getCurrentTime()
+						message: question,
+						new_conversation: this.new_conversation,
+						conversation_id: this.conversation_id
 					});
 					
-					if (response.success) {
+					if (response) {
 						// 添加AI回复
-						this.addMessage({
-							type: 'ai',
-							content: response.data.content,
-							time: response.data.time
-						});
+						this.messageList = response.history || []
+						this.conversation_id = response.conversation_id
+						this.new_conversation = false
+						setSelectedChat(this.conversation_id)
 					} else {
 						uni.showToast({
 							title: 'AI回复失败',
@@ -361,16 +281,13 @@
 				}
 				
 				this.isLoading = false;
-				
-				// 保存对话到历史记录
-				this.saveCurrentChat();
+				// this.saveCurrentChat();
 			},
 			
 			// 添加消息到列表
 			addMessage(message) {
 				this.messageList.push(message);
 				this.$nextTick(() => {
-					// 延迟滚动确保新消息完全渲染
 					setTimeout(() => {
 						this.scrollToBottom();
 					}, 100);
@@ -379,29 +296,22 @@
 			
 			// 滚动到底部
 			scrollToBottom() {
-				this.$nextTick(() => {
-					// 使用scroll-into-view滚动到最后一个消息
-					if (this.messageList.length > 0) {
-						const lastIndex = this.messageList.length - 1;
-						this.scrollIntoView = `msg-${lastIndex}`;
-					} else {
-						// 如果没有消息，滚动到顶部
-						this.scrollTop = 0;
-					}
+				if (this.messageList.length > 0) {
+					const lastIndex = this.messageList.length - 1;
+					this.scrollIntoView = `msg-${lastIndex}`;
+				} else {
+					this.scrollTop = 0;
+				}
+			},
+			
+			// 显示历史侧边栏
+			showHistorySidebar() {
+				uni.navigateTo({
+					url: '/pages/chatAI/history'
 				});
 			},
 			
-			// 获取当前时间
-			getCurrentTime() {
-				return getCurrentTime();
-			},
-			
-			// 获取当前日期时间
-			getCurrentDateTime() {
-				return getCurrentDateTime();
-			},
-			
-			// 搜索输入处理
+			// 搜索相关方法
 			onSearchInput() {
 				if (this.searchKeyword.trim()) {
 					this.performSearch();
@@ -410,7 +320,6 @@
 				}
 			},
 			
-			// 执行搜索
 			performSearch() {
 				if (!this.searchKeyword.trim()) {
 					this.clearSearch();
@@ -427,7 +336,6 @@
 				});
 				
 				if (this.searchResults.length > 0) {
-					// 滚动到第一个搜索结果
 					this.scrollToMessage(this.searchResults[0]);
 					uni.showToast({
 						title: `找到 ${this.searchResults.length} 个结果`,
@@ -441,7 +349,6 @@
 				}
 			},
 			
-			// 清除搜索
 			clearSearch() {
 				this.searchKeyword = '';
 				this.searchResults = [];
@@ -452,11 +359,6 @@
 				if (!this.searchKeyword.trim()) return false;
 				const index = this.messageList.indexOf(message);
 				return this.searchResults.includes(index);
-			},
-			
-			// 高亮搜索文本（已移除，改用CSS样式实现）
-			highlightSearchText(text) {
-				return text; // 直接返回原文本，使用CSS样式实现高亮
 			},
 			
 			// 滚动到指定消息
@@ -484,30 +386,21 @@
 			
 			// 引用消息
 			quoteMessage(message) {
-				this.quotedMessage = message;
+				this.inputMessage = `引用：${message.content}\n\n`;
 				uni.showToast({
 					title: '已引用消息',
 					icon: 'success'
 				});
 			},
 			
-			// 清除引用
-			clearQuote() {
-				this.quotedMessage = null;
-			},
-			
 			// 切换收藏状态
 			toggleStar(message, index) {
-				// 使用Vue.set确保响应式更新
 				this.$set(message, 'starred', !message.starred);
-				
 				uni.showToast({
 					title: message.starred ? '已收藏' : '已取消收藏',
 					icon: 'success'
 				});
 			},
-			
-
 			
 			// 反馈消息
 			async feedbackMessage(message) {
@@ -537,35 +430,10 @@
 						}
 					}
 				});
-			},
-			
-			// 获取引用内容
-			getQuoteContent(content) {
-				if (content.includes('引用：')) {
-					const parts = content.split('\n\n');
-					if (parts.length > 1) {
-						const quoteText = parts[0].replace('引用：', '');
-						// 只显示前30个字符，确保一行显示
-						return quoteText.length > 30 ? quoteText.substring(0, 30) + '...' : quoteText;
-					}
-				}
-				return '';
-			},
-			
-			// 获取主要内容
-			getMainContent(content) {
-				if (content.includes('引用：')) {
-					const parts = content.split('\n\n');
-					if (parts.length > 1) {
-						return parts.slice(1).join('\n\n');
-					}
-				}
-				return content;
 			}
 		}
 	}
 </script>
-
 <style scoped>
 	.chat-container {
 		height: 100vh;

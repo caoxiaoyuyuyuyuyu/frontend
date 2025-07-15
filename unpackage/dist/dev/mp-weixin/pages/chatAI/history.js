@@ -19,148 +19,66 @@ const _sfc_main = {
       ]
     };
   },
-  onLoad() {
-    this.loadHistoryChats();
-  },
   onShow() {
     this.loadHistoryChats();
   },
   computed: {
-    // 过滤后的历史对话列表
     filteredHistoryChats() {
-      return this.historyChats;
+      return this.historyChats.sort((a, b) => {
+        return new Date(b.lastTime) - new Date(a.lastTime);
+      });
     }
   },
   methods: {
+    // 转换后端数据格式
+    formatConversations(data) {
+      if (!data || !data.conversations)
+        return [];
+      return data.conversations;
+    },
     // 加载历史对话列表
     async loadHistoryChats() {
       try {
         const response = await pages_chatAI_api.loadHistoryChats();
-        if (response.success) {
-          this.historyChats = response.data || [];
-        } else {
-          this.historyChats = [
-            {
-              id: "chat1",
-              title: "关于玉米害虫的咨询",
-              lastTime: "2024-01-15 14:30",
-              messages: [
-                {
-                  type: "user",
-                  content: "玉米地里发现了虫子，能帮我识别一下吗？",
-                  time: "14:30"
-                },
-                {
-                  type: "ai",
-                  content: "根据您的描述，这可能是玉米螟。建议您上传图片进行更准确的识别。",
-                  time: "14:31"
-                }
-              ]
-            },
-            {
-              id: "chat2",
-              title: "水稻病虫害防治",
-              lastTime: "2024-01-14 09:15",
-              messages: [
-                {
-                  type: "user",
-                  content: "水稻叶子发黄，是什么原因？",
-                  time: "09:15"
-                },
-                {
-                  type: "ai",
-                  content: "水稻叶子发黄可能是缺肥或病虫害导致的。建议您检查是否有虫害，并适当施肥。",
-                  time: "09:16"
-                }
-              ]
-            },
-            {
-              id: "chat3",
-              title: "蔬菜害虫识别",
-              lastTime: "2024-01-13 16:45",
-              messages: [
-                {
-                  type: "user",
-                  content: "白菜上有小虫子，怎么处理？",
-                  time: "16:45"
-                },
-                {
-                  type: "ai",
-                  content: "这可能是菜青虫。建议使用生物农药或人工捕杀，避免使用高毒农药。",
-                  time: "16:46"
-                }
-              ]
-            },
-            {
-              id: "chat4",
-              title: "果树病虫害咨询",
-              lastTime: "2024-01-12 11:20",
-              messages: [
-                {
-                  type: "user",
-                  content: "苹果树上有蚜虫，用什么药比较好？",
-                  time: "11:20"
-                },
-                {
-                  type: "ai",
-                  content: "对于苹果树蚜虫，建议使用吡虫啉或啶虫脒等药剂，注意轮换使用避免抗性。",
-                  time: "11:21"
-                }
-              ]
-            },
-            {
-              id: "chat5",
-              title: "小麦病虫害防治",
-              lastTime: "2024-01-11 15:30",
-              messages: [
-                {
-                  type: "user",
-                  content: "小麦叶子有白粉病，怎么防治？",
-                  time: "15:30"
-                },
-                {
-                  type: "ai",
-                  content: "小麦白粉病可以使用三唑酮、戊唑醇等药剂防治，同时注意通风透光。",
-                  time: "15:31"
-                }
-              ]
-            }
-          ];
+        if (response) {
+          this.historyChats = this.formatConversations(response);
         }
       } catch (error) {
-        common_vendor.index.__f__("error", "at pages/chatAI/history.vue:191", "加载历史对话失败:", error);
+        common_vendor.index.__f__("error", "at pages/chatAI/history.vue:101", "加载历史对话失败:", error);
         common_vendor.index.showToast({
           title: "加载失败，请检查网络",
           icon: "none"
         });
-        this.historyChats = [
-          {
-            id: "chat1",
-            title: "关于玉米害虫的咨询",
-            lastTime: "2024-01-15 14:30",
-            messages: [
-              {
-                type: "user",
-                content: "玉米地里发现了虫子，能帮我识别一下吗？",
-                time: "14:30"
-              },
-              {
-                type: "ai",
-                content: "根据您的描述，这可能是玉米螟。建议您上传图片进行更准确的识别。",
-                time: "14:31"
-              }
-            ]
-          }
-        ];
       }
+    },
+    // 格式化时间显示
+    formatTime(timestamp) {
+      if (!timestamp)
+        return "";
+      const date = new Date(timestamp);
+      return `${date.getFullYear()}-${(date.getMonth() + 1).toString().padStart(2, "0")}-${date.getDate().toString().padStart(2, "0")} ${date.getHours().toString().padStart(2, "0")}:${date.getMinutes().toString().padStart(2, "0")}`;
+    },
+    // 获取对话标题
+    getChatTitle(chat) {
+      if (chat.title)
+        return chat.title;
+      if (chat.messages && chat.messages.length > 0) {
+        const firstMessage = chat.messages[0];
+        return firstMessage.content.substring(0, 20) + (firstMessage.content.length > 20 ? "..." : "");
+      }
+      return "未命名对话";
     },
     // 获取预览文本
     getPreviewText(messages) {
-      return pages_chatAI_api.getMessagePreview(messages);
+      if (!messages || messages.length === 0)
+        return "";
+      const lastMessage = messages[messages.length - 1];
+      return lastMessage.content.substring(0, 50) + (lastMessage.content.length > 50 ? "..." : "");
     },
     // 加载指定对话
-    loadChat(chat) {
-      pages_chatAI_api.setSelectedChat(chat);
+    loadChat(chat_id) {
+      pages_chatAI_api.setSelectedChat(chat_id);
+      common_vendor.index.__f__("log", "at pages/chatAI/history.vue:137", chat_id);
       common_vendor.index.showToast({
         title: "正在加载对话",
         icon: "loading"
@@ -169,17 +87,14 @@ const _sfc_main = {
         common_vendor.index.switchTab({
           url: "/pages/chatAI/chatAI",
           success: () => {
-            common_vendor.index.__f__("log", "at pages/chatAI/history.vue:241", "switchTab跳转成功");
+            common_vendor.index.__f__("log", "at pages/chatAI/history.vue:148", "switchTab跳转成功");
           },
           fail: (err) => {
-            common_vendor.index.__f__("log", "at pages/chatAI/history.vue:244", "switchTab失败，尝试navigateTo:", err);
+            common_vendor.index.__f__("log", "at pages/chatAI/history.vue:151", "switchTab失败，尝试navigateTo:", err);
             common_vendor.index.navigateTo({
               url: "/pages/chatAI/chatAI",
-              success: () => {
-                common_vendor.index.__f__("log", "at pages/chatAI/history.vue:249", "navigateTo跳转成功");
-              },
               fail: (navigateErr) => {
-                common_vendor.index.__f__("log", "at pages/chatAI/history.vue:252", "navigateTo也失败:", navigateErr);
+                common_vendor.index.__f__("log", "at pages/chatAI/history.vue:155", "navigateTo也失败:", navigateErr);
                 common_vendor.index.showToast({
                   title: "跳转失败，请手动返回",
                   icon: "none",
@@ -191,48 +106,15 @@ const _sfc_main = {
         });
       }, 100);
     },
-    // 删除对话
-    async deleteChat(chatId) {
-      common_vendor.index.showModal({
-        title: "删除对话",
-        content: "确定要删除这个对话吗？删除后无法恢复。",
-        success: async (res) => {
-          if (res.confirm) {
-            try {
-              const response = await pages_chatAI_api.deleteChat(chatId);
-              if (response.success) {
-                this.historyChats = this.historyChats.filter((chat) => chat.id !== chatId);
-                common_vendor.index.showToast({
-                  title: "删除成功",
-                  icon: "success"
-                });
-              } else {
-                common_vendor.index.showToast({
-                  title: response.message || "删除失败",
-                  icon: "none"
-                });
-              }
-            } catch (error) {
-              common_vendor.index.__f__("error", "at pages/chatAI/history.vue:289", "删除对话失败:", error);
-              common_vendor.index.showToast({
-                title: "删除失败，请检查网络",
-                icon: "none"
-              });
-            }
-          }
-        }
-      });
-    },
-    // 搜索输入处理
+    // 搜索相关方法保持不变
     onSearchInput() {
     },
-    // 执行搜索
     async performSearch() {
       if (this.searchKeyword.trim()) {
         try {
           const response = await pages_chatAI_api.searchChats(this.searchKeyword, this.filterType);
           if (response.success) {
-            this.historyChats = response.data || [];
+            this.historyChats = this.formatConversations(response.data) || [];
             const count = this.historyChats.length;
             if (count > 0) {
               common_vendor.index.showToast({
@@ -252,7 +134,7 @@ const _sfc_main = {
             });
           }
         } catch (error) {
-          common_vendor.index.__f__("error", "at pages/chatAI/history.vue:331", "搜索失败:", error);
+          common_vendor.index.__f__("error", "at pages/chatAI/history.vue:196", "搜索失败:", error);
           common_vendor.index.showToast({
             title: "搜索失败，请检查网络",
             icon: "none"
@@ -260,15 +142,10 @@ const _sfc_main = {
         }
       }
     },
-    // 清除搜索
     clearSearch() {
       this.searchKeyword = "";
+      this.loadHistoryChats();
     },
-    // 高亮搜索文本（已移除，改用CSS样式实现）
-    highlightSearchText(text) {
-      return text;
-    },
-    // 显示筛选选项
     showFilterOptions() {
       const options = this.filterOptions.map((option) => option.label);
       common_vendor.index.showActionSheet({
@@ -283,15 +160,11 @@ const _sfc_main = {
         }
       });
     },
-    // 按时间筛选对话（已移至API中）
-    filterByTime(chats) {
-    },
-    // 检查对话是否高亮
     isChatHighlighted(chat) {
       if (!this.searchKeyword.trim())
         return false;
       const keyword = this.searchKeyword.toLowerCase();
-      if (chat.title && chat.title.toLowerCase().includes(keyword)) {
+      if (this.getChatTitle(chat).toLowerCase().includes(keyword)) {
         return true;
       }
       if (chat.messages) {
@@ -316,21 +189,20 @@ function _sfc_render(_ctx, _cache, $props, $setup, $data, $options) {
     h: common_vendor.o((...args) => $options.clearSearch && $options.clearSearch(...args))
   } : {}, {
     i: common_vendor.f($options.filteredHistoryChats, (chat, index, i0) => {
+      var _a;
       return {
-        a: common_vendor.t(chat.title),
-        b: common_vendor.t(chat.lastTime),
+        a: common_vendor.t($options.getChatTitle(chat)),
+        b: common_vendor.t($options.formatTime(chat.lastTime || ((_a = chat.messages[chat.messages.length - 1]) == null ? void 0 : _a.timestamp))),
         c: common_vendor.t($options.getPreviewText(chat.messages)),
-        d: common_vendor.o(($event) => $options.deleteChat(chat.id), index),
-        e: index,
-        f: common_vendor.n($options.isChatHighlighted(chat) ? "highlighted" : ""),
-        g: common_vendor.o(($event) => $options.loadChat(chat), index)
+        d: index,
+        e: common_vendor.n($options.isChatHighlighted(chat) ? "highlighted" : ""),
+        f: common_vendor.o(($event) => $options.loadChat(chat.id), index)
       };
     }),
-    j: common_assets._imports_2$1,
-    k: $options.filteredHistoryChats.length === 0
+    j: $options.filteredHistoryChats.length === 0
   }, $options.filteredHistoryChats.length === 0 ? {
-    l: common_vendor.t($data.searchKeyword ? "未找到相关对话" : "暂无历史对话"),
-    m: common_vendor.t($data.searchKeyword ? "尝试其他关键词" : "开始新的对话吧")
+    k: common_vendor.t($data.searchKeyword ? "未找到相关对话" : "暂无历史对话"),
+    l: common_vendor.t($data.searchKeyword ? "尝试其他关键词" : "开始新的对话吧")
   } : {});
 }
 const MiniProgramPage = /* @__PURE__ */ common_vendor._export_sfc(_sfc_main, [["render", _sfc_render], ["__scopeId", "data-v-a91f6b25"]]);

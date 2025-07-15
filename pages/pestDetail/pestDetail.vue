@@ -5,14 +5,14 @@
 		<view class="pest-header">
 			<image v-if="pestInfo.image" :src="getImageUrl(pestInfo.image)" mode="aspectFill" class="pest-header-bg" />
 			<view v-else class="pest-header-bg-fallback"></view>
-			<view class="pest-header-blur"></view>
+			<!-- <view class="pest-header-blur"></view> -->
 		</view>
 		<!-- 白色信息卡片 -->
 		<view class="pest-info-card">
-			<view class="info-img-box">
-				<image v-if="pestInfo.image" :src="getImageUrl(pestInfo.image)" mode="aspectFill" class="info-img" />
-				<view v-else class="pest-icon-large">🐛</view>
-			</view>
+			<!-- <view class="info-img-box"> -->
+				<!-- <image v-if="pestInfo.image" :src="getImageUrl(pestInfo.image)" mode="aspectFill" class="info-img" /> -->
+				<!-- <view v-else class="pest-icon-large">🐛</view> -->
+			<!-- </view> -->
 			<view class="info-main-box">
 				<view class="info-title">
 					{{ pestInfo.name }}<span v-if="pestInfo.alias">（{{ pestInfo.alias }}）</span>
@@ -189,7 +189,7 @@
 			</view>
 		</view>
 		<!-- 底部固定操作栏 -->
-		<view class="fixed-bottom-bar">
+		<!-- <view class="fixed-bottom-bar">
 			<button class="bottom-btn left-btn" @click="onContinue">
 				<image src="/static/camera.png" class="btn-icon" />
 				<text>继续识别</text>
@@ -198,12 +198,12 @@
 				<image src="/static/forward.png" class="btn-icon" />
 				<text>分享给好友</text>
 			</button>
-		</view>
+		</view> -->
 	</view>
 </template>
 
 <script>
-import { getPestDetailInfo, getPestFavoriteStatus, togglePestFavorite, getImageUrl } from './api.js';
+import { getPestDetailInfo, getImageUrl } from './api.js';
 
 export default {
 	data() {
@@ -220,6 +220,7 @@ export default {
 		}
 	},
 	onLoad(options) {
+		console.log(options)
 		if (options.pestId) {
 			getPestDetailInfo(options.pestId).then(data => {
 				this.pestInfo = data;
@@ -336,7 +337,7 @@ export default {
 	border-radius: 24rpx;
 	box-shadow: 0 8rpx 32rpx rgba(0,0,0,0.10);
 	padding: 32rpx 48rpx;
-	margin: -60rpx 32rpx 32rpx 32rpx;
+	margin: 32rpx;
 }
 
 .info-img-box {

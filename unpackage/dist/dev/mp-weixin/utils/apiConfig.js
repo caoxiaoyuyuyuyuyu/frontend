@@ -2,11 +2,11 @@
 const common_vendor = require("../common/vendor.js");
 const API_CONFIG = {
   // 基础URL
-  BASE_URL: "http://192.168.241.56:5000",
+  BASE_URL: "http://localhost:5000",
   // API版本
   API_VERSION: "api",
   // 请求超时时间（毫秒）
-  TIMEOUT: 1e4,
+  TIMEOUT: 5e4,
   // 重试次数
   RETRY_TIMES: 3,
   // 重试延迟（毫秒）
@@ -73,6 +73,7 @@ const request = (options) => {
     timeout: API_CONFIG.TIMEOUT,
     ...rest
   });
+  common_vendor.index.__f__("log", "at utils/apiConfig.js:144", config);
   return new Promise((resolve, reject) => {
     common_vendor.index.request({
       ...config,
@@ -92,6 +93,36 @@ const request = (options) => {
     });
   });
 };
+const uploadFile = (options) => {
+  const { url, filePath, name = "file", formData = {}, headers = {}, ...rest } = options;
+  return new Promise((resolve, reject) => {
+    common_vendor.index.uploadFile({
+      url: getApiUrl(url),
+      filePath,
+      name,
+      formData,
+      header: getHeaders(headers),
+      timeout: API_CONFIG.TIMEOUT,
+      ...rest,
+      success: (response) => {
+        try {
+          if (response.statusCode === 200) {
+            const data = JSON.parse(response.data);
+            resolve(data);
+          } else {
+            reject(new Error("文件上传失败"));
+          }
+        } catch (error) {
+          reject(new Error("文件上传失败"));
+        }
+      },
+      fail: (error) => {
+        reject(new Error("网络请求失败"));
+      }
+    });
+  });
+};
 exports.getApiUrl = getApiUrl;
 exports.request = request;
+exports.uploadFile = uploadFile;
 //# sourceMappingURL=../../.sourcemap/mp-weixin/utils/apiConfig.js.map
