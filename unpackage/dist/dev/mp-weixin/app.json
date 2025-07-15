@@ -6,7 +6,6 @@
     "pages/pestGallery/pestGallery",
     "pages/profile/record",
     "pages/profile/help",
-    "pages/profile/pestShare",
     "pages/chatAI/history",
     "pages/pestDetail/pestDetail"
   ],
@@ -21,26 +20,26 @@
       {
         "pagePath": "pages/index/index",
         "text": "首页",
-        "iconPath": "/static/logo.png",
-        "selectedIconPath": "/static/logo.png"
+        "iconPath": "/static/home2.png",
+        "selectedIconPath": "/static/home.png"
       },
       {
         "pagePath": "pages/pestGallery/pestGallery",
         "text": "害虫库",
-        "iconPath": "/static/logo.png",
-        "selectedIconPath": "/static/logo.png"
+        "iconPath": "/static/library2.png",
+        "selectedIconPath": "/static/library.png"
       },
       {
         "pagePath": "pages/chatAI/chatAI",
         "text": "AI问答",
-        "iconPath": "/static/logo.png",
-        "selectedIconPath": "/static/logo.png"
+        "iconPath": "/static/leaf2.png",
+        "selectedIconPath": "/static/leaf.png"
       },
       {
         "pagePath": "pages/profile/profile",
         "text": "我的",
-        "iconPath": "/static/logo.png",
-        "selectedIconPath": "/static/logo.png"
+        "iconPath": "/static/user2.png",
+        "selectedIconPath": "/static/user.png"
       }
     ]
   },

@@ -15,9 +15,9 @@ const _sfc_main = {
       // 滚动位置
       scrollIntoView: "",
       // 滚动到指定消息
-      userAvatar: "/static/logo.png",
+      userAvatar: "https://thirdwx.qlogo.cn/mmopen/vi_32/POgEwh4mIHO4nibH0KlMECNjjGxQUq24ZEaGT4poC6icRiccVGKSyXwibcPq4BWmiaIGuG1icwxaQX6grC9VemZoJ8rg/132",
       // 用户头像
-      aiAvatar: "/static/logo.png",
+      aiAvatar: "/static/leaf.png",
       // AI头像
       conversation_id: null,
       // 当前对话ID
@@ -29,6 +29,7 @@ const _sfc_main = {
     };
   },
   onShow() {
+    this.userAvatar = common_vendor.index.getStorageInfoSync("userInfo").avatar || "https://thirdwx.qlogo.cn/mmopen/vi_32/POgEwh4mIHO4nibH0KlMECNjjGxQUq24ZEaGT4poC6icRiccVGKSyXwibcPq4BWmiaIGuG1icwxaQX6grC9VemZoJ8rg/132";
     const selectedChat = pages_chatAI_api.getSelectedChat();
     if (selectedChat) {
       this.conversation_id = selectedChat;
@@ -103,9 +104,9 @@ const _sfc_main = {
       };
       try {
         await pages_chatAI_api.saveChatToBackend(chatData);
-        common_vendor.index.__f__("log", "at pages/chatAI/chatAI.vue:229", "对话已保存:", chatData);
+        common_vendor.index.__f__("log", "at pages/chatAI/chatAI.vue:231", "对话已保存:", chatData);
       } catch (error) {
-        common_vendor.index.__f__("error", "at pages/chatAI/chatAI.vue:231", "保存对话失败:", error);
+        common_vendor.index.__f__("error", "at pages/chatAI/chatAI.vue:233", "保存对话失败:", error);
         common_vendor.index.showToast({
           title: "保存失败，请检查网络",
           icon: "none"
@@ -143,7 +144,7 @@ const _sfc_main = {
           });
         }
       } catch (error) {
-        common_vendor.index.__f__("error", "at pages/chatAI/chatAI.vue:276", "AI回复错误:", error);
+        common_vendor.index.__f__("error", "at pages/chatAI/chatAI.vue:278", "AI回复错误:", error);
         common_vendor.index.showToast({
           title: "网络连接失败",
           icon: "none"
@@ -276,7 +277,7 @@ const _sfc_main = {
               icon: "success"
             });
           } catch (error) {
-            common_vendor.index.__f__("error", "at pages/chatAI/chatAI.vue:425", "提交反馈失败:", error);
+            common_vendor.index.__f__("error", "at pages/chatAI/chatAI.vue:427", "提交反馈失败:", error);
             common_vendor.index.showToast({
               title: "反馈提交失败",
               icon: "none"
@@ -330,9 +331,10 @@ function _sfc_render(_ctx, _cache, $props, $setup, $data, $options) {
     s: common_vendor.o((...args) => $options.sendMessage && $options.sendMessage(...args)),
     t: $data.message,
     v: common_vendor.o(($event) => $data.message = $event.detail.value),
-    w: common_assets._imports_4,
-    x: !$data.message.trim() || $data.isLoading,
-    y: common_vendor.o((...args) => $options.sendMessage && $options.sendMessage(...args))
+    w: $data.isLoading ? "/static/checkbox.png" : "/static/up.png",
+    x: common_vendor.n($data.isLoading ? "checkbox-icon" : "send-icon"),
+    y: !$data.message.trim() || $data.isLoading,
+    z: common_vendor.o((...args) => $options.sendMessage && $options.sendMessage(...args))
   });
 }
 const MiniProgramPage = /* @__PURE__ */ common_vendor._export_sfc(_sfc_main, [["render", _sfc_render], ["__scopeId", "data-v-a298e7ff"]]);

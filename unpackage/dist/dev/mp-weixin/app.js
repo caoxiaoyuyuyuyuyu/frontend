@@ -8,7 +8,6 @@ if (!Math) {
   "./pages/pestGallery/pestGallery.js";
   "./pages/profile/record.js";
   "./pages/profile/help.js";
-  "./pages/profile/pestShare.js";
   "./pages/chatAI/history.js";
   "./pages/pestDetail/pestDetail.js";
 }

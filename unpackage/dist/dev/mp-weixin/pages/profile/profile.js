@@ -7,10 +7,10 @@ const _sfc_main = {
       hasLogin: false,
       userInfo: {},
       features: [
-        { text: "识别记录", icon: "/static/logo.png", url: "/pages/profile/record" },
-        { text: "识别帮助", icon: "/static/logo.png", url: "/pages/profile/help" },
-        { text: "联系客服", icon: "/static/logo.png", url: "" },
-        { text: "退出登录", icon: "/static/logo.png", url: "" }
+        { text: "识别记录", icon: "/static/scan2.png", url: "/pages/profile/record" },
+        { text: "识别帮助", icon: "/static/help.png", url: "/pages/profile/help" },
+        { text: "联系客服", icon: "/static/customer.png", url: "" },
+        { text: "退出登录", icon: "/static/door.png", url: "" }
       ]
     };
   },

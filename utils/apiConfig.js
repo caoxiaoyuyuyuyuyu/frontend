@@ -7,6 +7,7 @@
 export const API_CONFIG = {
   // 基础URL
   BASE_URL: 'http://121.41.69.216:5000',
+  // BASE_URL: 'http://192.168.142.56:5000',
   
   // API版本
   API_VERSION: 'api',

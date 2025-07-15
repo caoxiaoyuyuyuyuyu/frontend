@@ -408,3 +408,7 @@
 		background: rgba(0, 0, 0, 0.2);
 		margin: 8rpx 0;
 }
+.checkbox-icon.data-v-a298e7ff {
+	        width: 50rpx;
+	        height: 50rpx;
+}

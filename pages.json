@@ -10,21 +10,21 @@
 			"path" : "pages/chatAI/chatAI",
 			"style" : 
 			{
-				"navigationBarTitleText" : ""
+				"navigationBarTitleText" : "AI问答"
 			}
 		},
 		{
 			"path" : "pages/profile/profile",
 			"style" : 
 			{
-				"navigationBarTitleText" : ""
+				"navigationBarTitleText" : "我的"
 			}
 		},
 		{
 			"path" : "pages/pestGallery/pestGallery",
 			"style" : 
 			{
-				"navigationBarTitleText" : "",
+				"navigationBarTitleText" : "害虫库",
 				"enablePullDownRefresh": true
 			}
 		},
@@ -32,34 +32,28 @@
 			"path" : "pages/profile/record",
 			"style" : 
 			{
-				"navigationBarTitleText" : ""
+				"navigationBarTitleText" : "检测记录"
 			}
 		},
 		{
 			"path" : "pages/profile/help",
 			"style" : 
 			{
-				"navigationBarTitleText" : ""
+				"navigationBarTitleText" : "帮助中心"
 			}
 		},
-        {
-            "path": "pages/profile/pestShare",
-            "style": {
-                "navigationBarTitleText": ""
-            }
-        },
         {
         	"path" : "pages/chatAI/history",
         	"style" : 
         	{
-        		"navigationBarTitleText" : ""
+        		"navigationBarTitleText" : "问答历史"
         	}
         },
         {
         	"path" : "pages/pestDetail/pestDetail",
         	"style" : 
         	{
-        		"navigationBarTitleText" : ""
+        		"navigationBarTitleText" : "害虫详情"
         	}
         }
 
@@ -78,30 +72,30 @@
 	},
 	"tabBar": {
 		"list": [
-			{
-				"pagePath": "pages/index/index",
-				"text": "首页",
-				"iconPath": "/static/logo.png",
-				"selectedIconPath": "/static/logo.png"
-			},
-			{
-				"pagePath": "pages/pestGallery/pestGallery",
-				"text": "害虫库",
-				"iconPath": "/static/logo.png",
-				"selectedIconPath": "/static/logo.png"
-			},
-			{
-				"pagePath": "pages/chatAI/chatAI",
-				"text": "AI问答",
-				"iconPath": "/static/logo.png",
-				"selectedIconPath": "/static/logo.png"
-			},
-			{
-				"pagePath": "pages/profile/profile",
-				"text": "我的",
-				"iconPath": "/static/logo.png",
-				"selectedIconPath": "/static/logo.png"
-			}
+            {
+                "pagePath": "pages/index/index",
+                "text": "首页",
+                "iconPath": "/static/home2.png",
+                "selectedIconPath": "/static/home.png"
+            },
+            {
+                "pagePath": "pages/pestGallery/pestGallery",
+                "text": "害虫库",
+                "iconPath": "/static/library2.png",
+                "selectedIconPath": "/static/library.png"
+            },
+            {
+                "pagePath": "pages/chatAI/chatAI",
+                "text": "AI问答",
+                "iconPath": "/static/leaf2.png",
+                "selectedIconPath": "/static/leaf.png"
+            },
+            {
+                "pagePath": "pages/profile/profile",
+                "text": "我的",
+                "iconPath": "/static/user2.png",
+                "selectedIconPath": "/static/user.png"
+            }
 		]
 	},
 	"uniIdRouter": {}

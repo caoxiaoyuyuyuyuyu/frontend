@@ -3,6 +3,7 @@ const common_vendor = require("../common/vendor.js");
 const API_CONFIG = {
   // 基础URL
   BASE_URL: "http://121.41.69.216:5000",
+  // BASE_URL: 'http://192.168.142.56:5000',
   // API版本
   API_VERSION: "api",
   // 请求超时时间（毫秒）
@@ -73,7 +74,7 @@ const request = (options) => {
     timeout: API_CONFIG.TIMEOUT,
     ...rest
   });
-  common_vendor.index.__f__("log", "at utils/apiConfig.js:144", config);
+  common_vendor.index.__f__("log", "at utils/apiConfig.js:145", config);
   return new Promise((resolve, reject) => {
     common_vendor.index.request({
       ...config,

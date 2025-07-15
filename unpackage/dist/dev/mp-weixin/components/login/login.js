@@ -46,6 +46,7 @@ const _sfc_main = {
         });
         const res = await common_vendor.index.request({
           url: "http://121.41.69.216:5000/api/auth/login",
+          // url: 'http://192.168.142.56:5000/api/auth/login',
           method: "POST",
           data: {
             code: loginRes.code,
@@ -67,7 +68,7 @@ const _sfc_main = {
       } catch (error) {
         common_vendor.index.hideLoading();
         common_vendor.index.showToast({ title: "网络错误，请重试", icon: "none" });
-        common_vendor.index.__f__("error", "at components/login/login.vue:89", "登录错误:", error);
+        common_vendor.index.__f__("error", "at components/login/login.vue:90", "登录错误:", error);
       }
     }
   }

@@ -114,7 +114,7 @@
 					:disabled="!message.trim() || isLoading"
 					@tap="sendMessage"
 				>
-					<image src="/static/up.png" class="send-icon"></image>
+				<image :src="isLoading ? '/static/checkbox.png' : '/static/up.png'" :class="isLoading ? 'checkbox-icon' : 'send-icon'"></image>
 				</button>
 			</view>
 		</view>
@@ -141,8 +141,8 @@
 				isLoading: false, // 是否正在加载
 				scrollTop: 0, // 滚动位置
 				scrollIntoView: '', // 滚动到指定消息
-				userAvatar: '/static/logo.png', // 用户头像
-				aiAvatar: '/static/logo.png', // AI头像
+				userAvatar: 'https://thirdwx.qlogo.cn/mmopen/vi_32/POgEwh4mIHO4nibH0KlMECNjjGxQUq24ZEaGT4poC6icRiccVGKSyXwibcPq4BWmiaIGuG1icwxaQX6grC9VemZoJ8rg/132', // 用户头像
+				aiAvatar: '/static/leaf.png', // AI头像
 				conversation_id: null, // 当前对话ID
 				new_conversation: true,
 				searchKeyword: '', // 搜索关键词
@@ -150,6 +150,8 @@
 			}
 		},
 		onShow() {
+			this.userAvatar = uni.getStorageInfoSync('userInfo').avatar || 'https://thirdwx.qlogo.cn/mmopen/vi_32/POgEwh4mIHO4nibH0KlMECNjjGxQUq24ZEaGT4poC6icRiccVGKSyXwibcPq4BWmiaIGuG1icwxaQX6grC9VemZoJ8rg/132'
+			// console.log(uni.getStorageSync('userInfo'))
 			const selectedChat = getSelectedChat();
 			if (selectedChat) {
 				this.conversation_id = selectedChat
@@ -900,5 +902,9 @@
 		background: rgba(0, 0, 0, 0.2);
 		margin: 8rpx 0;
 	}
+	  .checkbox-icon {
+	        width: 50rpx;
+	        height: 50rpx;
+	    }
 </style>
 
